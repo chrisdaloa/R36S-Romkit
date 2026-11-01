@@ -1,0 +1,14 @@
+[project]
+name = "romkit"
+version = "0.1.0"
+description = "Catalogo web, pack per schede SD e scraping per archivi ROM EmulationStation (ArkOS/R36S). Nessun contenuto incluso."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = ["Pillow>=9"]
+
+[project.scripts]
+romkit = "romkit.cli:main"
+
+[tool.setuptools]
+packages = ["romkit"]

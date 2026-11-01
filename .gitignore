@@ -1,0 +1,12 @@
+config.toml
+*.local.toml
+__pycache__/
+*.pyc
+# dati generati e personali: mai nel repository
+/dati/
+/packs/
+/demo/archivio/
+/demo/dati/
+/demo/packs/
+credenziali*
+*.log

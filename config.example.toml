@@ -1,0 +1,46 @@
+# romkit: copia questo file in config.toml e adattalo (config.toml non va nel repository).
+# I percorsi con ~ vengono espansi. Tutto cio' che e' qui e' per-utente.
+
+[archivio]
+# Cartella con una sottocartella per sistema (nes, snes, psx...), come su ArkOS.
+percorso = "/percorso/del/tuo/EASYROMS"
+
+[uscite]
+# Dove il catalogo scrive data.js, descrizioni e miniature (puo' essere qualsiasi cartella).
+dati = "./dati"
+# Dove stanno i pack (definizione, gamelist ridotti, elenchi, report). Meglio vicino all'archivio.
+pack = "./packs"
+
+[catalogo]
+# Cartelle da non considerare sistemi.
+ignora = ["themes", "bios", "tools", "backup", "bezels", "bgmusic", "launchimages",
+          "savestates", "overlays", "System Volume Information", "shutdownimages"]
+# Sistemi in cui ogni elemento e' una cartella (es. scummvm).
+sistemi_cartelle = ["scummvm"]
+# Sistemi con i giochi in una sottocartella.
+sottocartelle = { "pico-8" = "carts" }
+# Sistemi in cui contano solo certe estensioni (es. i Ports sono script .sh).
+solo_estensione = { ports = ".sh", "pico-8" = ".p8.png" }
+
+[server]
+# 127.0.0.1 = solo questo PC. Usa 0.0.0.0 solo se vuoi aprire il catalogo dalla rete locale:
+# il server non ha autenticazione.
+host = "127.0.0.1"
+porta = 8765
+
+[gioca]
+# Pulsante «Gioca» nel browser (EmulatorJS). Spento di default: serve le ROM a chiunque
+# raggiunga il server. Accendilo solo in rete locale fidata.
+abilitato = false
+sistemi = ["nes", "snes", "gb", "gbc", "gba", "megadrive", "mastersystem", "gamegear", "pcengine", "ngp", "ngpc"]
+
+[sd]
+# Destinazione predefinita della copia di un pack.
+destinazione = "/media/utente/EASYROMS"
+
+[pack]
+# Cartelle di servizio copiate per intero in ogni pack.
+servizio = ["bios", "bezels", "bgmusic", "launchimages", "shutdownimages", "themes", "tools", "ports"]
+# File mai copiati.
+escludi = ["*.bak", "*.bak*", "*.pre_scrape", "*.pre_zip", "gamelist.xml.old", "*.part",
+           "Thumbs.db", "._*", ".DS_Store"]
