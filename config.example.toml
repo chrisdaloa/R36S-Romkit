@@ -37,6 +37,10 @@ sistemi = ["nes", "snes", "gb", "gbc", "gba", "megadrive", "mastersystem", "game
 [sd]
 # Destinazione predefinita della copia di un pack.
 destinazione = "/media/utente/EASYROMS"
+# SD o console che la pagina web puo' controllare (solo lettura). Il browser sceglie solo il NOME:
+# i percorsi non arrivano mai dalla pagina. Una console in wifi: "utente@host:/roms" (chiave SSH gia' attiva).
+sorgenti = { "SD nel PC" = "/media/utente/EASYROMS" }
+# sorgenti = { "SD nel PC" = "/media/utente/EASYROMS", "Console" = "ark@192.168.1.50:/roms" }
 
 [pack]
 # Cartelle di servizio copiate per intero in ogni pack.

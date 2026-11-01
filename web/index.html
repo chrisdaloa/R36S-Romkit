@@ -95,7 +95,7 @@ button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(
 <label>Riserva <input id="pris" type="number" min="0" step="1"> GB</label>
 <div id="bar"><i></i></div><span id="bt"></span>
 <button id="pa">Aggiungi i risultati</button><button id="pr">Togli i risultati</button>
-<button id="ps">Riepilogo</button><button id="pe">Esporta elenco</button><button id="pd">Elimina pack</button>
+<button id="ps">Riepilogo</button><select id="sds" aria-label="SD o console" hidden></select><button id="pc" hidden>Controlla SD</button><button id="sa" hidden title="Aggiungi una SD tra i volumi montati">+ SD</button><button id="sx" hidden title="Rimuovi la sorgente scelta (solo quelle aggiunte da qui)">− SD</button><span id="sf" hidden><select id="vol" aria-label="Volume rilevato"></select> <input id="nm" placeholder="Nome (es. SD 64 GB)" maxlength="40"> <button id="ss">Salva</button></span><button id="pe">Esporta elenco</button><button id="pd">Elimina pack</button>
 </div>
 </header>
 <main id="g"></main>
@@ -234,6 +234,54 @@ async function caricaPack(){
  if(!s||!Object.keys(s).length){try{s=JSON.parse(localStorage.getItem('packs')||'{}')}catch(e){s={}}}
  P=s||{};let a='';try{a=localStorage.getItem('pack')||''}catch(e){}
  attiva(P[a]?a:'')}
+
+// controllo della SD (sola lettura): il server legge la sorgente scelta e la confronta con il pack attivo
+let salvate={};
+async function sorgenti(sel){
+ try{const r=await fetch('/api/sd');if(!r.ok)return;const n=await r.json();
+  const v=await (await fetch('/api/volumi')).json();salvate=v.salvate;
+  $('sds').replaceChildren();n.forEach(x=>{const o=document.createElement('option');o.value=o.textContent=x;$('sds').appendChild(o)});
+  if(sel)$('sds').value=sel;
+  $('sds').hidden=$('pc').hidden=!n.length;$('sa').hidden=!v.modificabile;$('sx').hidden=!v.modificabile||!(($('sds').value) in salvate)}catch(e){}
+}
+if(location.protocol.startsWith('http'))sorgenti();
+$('sds').onchange=()=>{$('sx').hidden=!($('sds').value in salvate)};
+$('sa').onclick=async()=>{
+ const v=await (await fetch('/api/volumi')).json();
+ if(!v.volumi.length){alert('Nessuna SD rilevata sotto /media, /run/media o /mnt (serve una cartella con le cartelle dei sistemi).');return}
+ $('vol').replaceChildren();v.volumi.forEach(x=>{const o=document.createElement('option');o.value=o.textContent=x;$('vol').appendChild(o)});
+ $('sf').hidden=false};
+$('ss').onclick=async()=>{
+ const nome=$('nm').value.trim();if(!nome)return;
+ const r=await fetch('/api/sorgenti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,percorso:$('vol').value})});
+ if(!r.ok){alert('Non salvata: '+(r.statusText||r.status));return}
+ $('sf').hidden=true;$('nm').value='';sorgenti(nome)};
+$('sx').onclick=async()=>{
+ const nome=$('sds').value;if(!confirm('Rimuovere la sorgente «'+nome+'» dall\'elenco? Non tocca la SD.'))return;
+ const r=await fetch('/api/sorgenti',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome})});
+ if(r.ok)sorgenti()};
+$('pc').onclick=async()=>{
+ const rt=$('rt');rt.replaceChildren();const h=document.createElement('h2');h.style.fontSize='18px';
+ h.textContent='Controllo di «'+$('sds').value+'» rispetto al pack «'+pack+'»…';rt.append(h);$('rs').hidden=false;
+ let r;try{
+  const x=await fetch('/api/sd?sorgente='+encodeURIComponent($('sds').value)+'&pack='+encodeURIComponent(pack));
+  if(!x.ok)throw new Error(x.status+' '+x.statusText);r=await x.json()}
+ catch(e){h.textContent='SD non raggiungibile: '+e.message;return}
+ h.textContent='«'+$('sds').value+'» rispetto al pack «'+pack+'»';
+ const p=document.createElement('p');p.style.fontSize='13px';
+ const tot={sd:0,atteso:0,manca:0,extra:0,diversi:0};Object.values(r.confronto).forEach(x=>{for(const k in tot)tot[k]+=x[k]});
+ p.textContent=(r.spazio?gb(r.spazio.usati)+' usati, '+gb(r.spazio.liberi)+' liberi. ':'')+tot.sd.toLocaleString('it')+' giochi sulla SD, '+tot.atteso.toLocaleString('it')+' nel pack: '+
+  tot.manca.toLocaleString('it')+' da aggiungere, '+tot.extra.toLocaleString('it')+' in più, '+tot.diversi.toLocaleString('it')+' diversi.';
+ const tb=document.createElement('table');const th=document.createElement('tr');
+ ['Sistema','SD','Pack','Mancano','In più','Diversi'].forEach(t=>{const c=document.createElement('th');c.textContent=t;th.appendChild(c)});tb.appendChild(th);
+ Object.entries(r.confronto).filter(([s,x])=>x.sd||x.atteso).sort((a,b)=>(b[1].manca+b[1].extra+b[1].diversi)-(a[1].manca+a[1].extra+a[1].diversi)||b[1].atteso-a[1].atteso).forEach(([s,x])=>{
+  const tr=document.createElement('tr');[s,x.sd,x.atteso,x.manca,x.extra,x.diversi].forEach((v,i)=>{const c=document.createElement('td');c.textContent=typeof v==='number'?v.toLocaleString('it'):v;
+   if(i>=3&&v)c.style.color=i===3?'#d97706':i===4?'#dc2626':'#2563eb';tr.appendChild(c)});tb.appendChild(tr)});
+ rt.append(p,tb);
+ if(r.dettagli.length){const d=document.createElement('details');const sm=document.createElement('summary');sm.textContent='Dettaglio (primi '+Math.min(r.dettagli.length,2000)+')';d.appendChild(sm);
+  const pre=document.createElement('pre');pre.style.cssText='font-size:12px;max-height:240px;overflow:auto;white-space:pre-wrap';
+  pre.textContent=r.dettagli.map(x=>x[0]+' '+x[1]+'/'+x[2]).join('\n');d.appendChild(pre);rt.appendChild(d)}
+};
 
 caricaPack();
 </script>

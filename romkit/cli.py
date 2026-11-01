@@ -8,6 +8,8 @@ def _cfg(a):
     if not os.path.exists(f):
         sys.exit(f'Config non trovata: {f}. Copia config.example.toml in config.toml e adattala.')
     c = C.carica(f)
+    if getattr(a, 'archivio', None):
+        c.archivio = os.path.abspath(os.path.expanduser(a.archivio))
     if not c.archivio or not os.path.isdir(c.archivio):
         sys.exit(f'Archivio non raggiungibile: {c.archivio!r} (imposta [archivio].percorso)')
     return c
@@ -18,9 +20,15 @@ def main(argv=None):
     p.add_argument('--config', default='config.toml')
     sub = p.add_subparsers(dest='cmd', required=True)
     sub.add_parser('catalogo', help='genera i dati del catalogo dall\'archivio')
-    sub.add_parser('serve', help='avvia il server del catalogo')
+    sv = sub.add_parser('serve', help='avvia il server del catalogo')
+    sv.add_argument('--archivio', help='usa questa cartella al posto di [archivio].percorso')
     d = sub.add_parser('demo', help='crea un archivio finto e una config di prova')
     d.add_argument('cartella', nargs='?', default='demo-lavoro')
+    sd = sub.add_parser('sd', help='riepiloga e confronta una SD (montata o via SSH), in sola lettura')
+    sds = sd.add_subparsers(dest='az', required=True)
+    sr = sds.add_parser('riepilogo'); sr.add_argument('dove', nargs='?', help='cartella o utente@host:/percorso')
+    sc = sds.add_parser('confronta'); sc.add_argument('dove', nargs='?'); sc.add_argument('--pack')
+    sc.add_argument('--dettagli', action='store_true')
     pk = sub.add_parser('pack', help='prepara o copia un pack')
     ps = pk.add_subparsers(dest='az', required=True)
     pp = ps.add_parser('prepara'); pp.add_argument('nome'); pp.add_argument('cartella')
@@ -38,6 +46,12 @@ def main(argv=None):
     elif a.cmd == 'serve':
         from . import server
         server.serve(cfg)
+    elif a.cmd == 'sd':
+        from . import sd
+        dove = a.dove or cfg['sd']['destinazione']
+        if not dove:
+            sys.exit('Indica la SD: romkit sd riepilogo <cartella|utente@host:/percorso> oppure imposta [sd].destinazione')
+        sd.riepilogo(cfg, dove) if a.az == 'riepilogo' else sd.confronta(cfg, dove, a.pack, a.dettagli)
     elif a.cmd == 'pack':
         from . import packs
         if a.az == 'prepara':

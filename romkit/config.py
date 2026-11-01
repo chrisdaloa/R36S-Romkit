@@ -14,7 +14,7 @@ DEFAULT = {
     },
     'server': {'host': '127.0.0.1', 'porta': 8765},
     'gioca': {'abilitato': False, 'sistemi': []},
-    'sd': {'destinazione': ''},
+    'sd': {'destinazione': '', 'sorgenti': {}},
     'pack': {
         'servizio': ['bios', 'bezels', 'bgmusic', 'launchimages', 'shutdownimages', 'themes', 'tools'],
         'escludi': ['*.bak', '*.bak*', '*.pre_scrape', '*.pre_zip', 'gamelist.xml.old', '*.part',

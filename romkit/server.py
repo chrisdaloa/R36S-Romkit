@@ -1,7 +1,8 @@
 """Server locale del catalogo: pagina web, dati generati, pack e (solo se abilitato) ROM in sola lettura."""
 import os, json, posixpath, tempfile
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import unquote
+from urllib.parse import unquote, urlsplit, parse_qs
+from . import sd, sorgenti
 
 WEB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'web')
 MAX_PACKS = 20 * 1024 * 1024
@@ -10,6 +11,7 @@ DATI = ('data.js', 'data.json')
 
 def crea(cfg):
     packs_file = os.path.join(cfg.pack, 'packs.json')
+    locale = cfg['server']['host'] in ('127.0.0.1', 'localhost', '::1')
     giocabili = set(cfg['gioca']['sistemi']) if cfg['gioca']['abilitato'] else set()
 
     class H(SimpleHTTPRequestHandler):
@@ -38,7 +40,29 @@ def crea(cfg):
             self.end_headers()
             self.wfile.write(dati)
 
+        def _sd(self, q):
+            # sola lettura; il browser indica solo il nome di una sorgente configurata
+            sorg = sorgenti.tutte(cfg)
+            if not q.get('sorgente'):
+                return self._json(json.dumps(list(sorg)).encode())
+            nome = q['sorgente'][0]
+            if nome not in sorg:
+                return self.send_error(404, 'Sorgente sconosciuta')
+            try:
+                r = sd.analizza(cfg, sorg[nome], (q.get('pack') or [None])[0] or None)
+            except (OSError, KeyError, SystemExit) as e:
+                return self.send_error(502, str(e)[:200] or 'SD non raggiungibile')
+            r['dettagli'] = r['dettagli'][:2000]
+            r.pop('dove', None)
+            self._json(json.dumps(r, ensure_ascii=False).encode())
+
         def do_GET(self):
+            ru = urlsplit(self.path)
+            if ru.path == '/api/volumi':
+                return self._json(json.dumps({'volumi': sorgenti.volumi(cfg), 'salvate': sorgenti.salvate(cfg),
+                                              'modificabile': locale}).encode())
+            if ru.path == '/api/sd':
+                return self._sd(parse_qs(ru.query))
             if self.path.split('?', 1)[0] == '/api/packs':
                 if not os.path.isdir(cfg.pack):
                     return self.send_error(503, 'Cartella dei pack non raggiungibile')
@@ -74,8 +98,35 @@ def crea(cfg):
             self.send_response(204)
             self.end_headers()
 
+        def _origine_ok(self):
+            orig = self.headers.get('Origin')
+            return bool(locale) and not (orig and orig.split('://', 1)[-1] != self.headers.get('Host'))
+
+        def _sorgente(self, agg):
+            # il browser indica un nome e un percorso tra i volumi rilevati, mai un percorso libero
+            if urlsplit(self.path).path != '/api/sorgenti':
+                return self.send_error(405)
+            if not self._origine_ok():
+                return self.send_error(403)
+            n = int(self.headers.get('Content-Length') or 0)
+            if not 0 < n <= 4096:
+                return self.send_error(413)
+            try:
+                d = json.loads(self.rfile.read(n))
+                if agg:
+                    sorgenti.aggiungi(cfg, d['nome'], d['percorso'])
+                else:
+                    sorgenti.rimuovi(cfg, d['nome'])
+            except (ValueError, KeyError, TypeError) as e:
+                return self.send_error(400, str(e)[:100])
+            self.send_response(204)
+            self.end_headers()
+
         def do_POST(self):
-            self.send_error(405)
+            self._sorgente(True)
+
+        def do_DELETE(self):
+            self._sorgente(False)
 
     return H
 
