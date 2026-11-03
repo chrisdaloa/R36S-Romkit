@@ -182,6 +182,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
  <label class="sortw"><span>Ordina per</span><select id="o" aria-label="Ordine"><option value="t">Titolo</option><option value="y">Anno (recenti)</option><option value="r">Valutazione</option><option value="sz">Dimensione</option><option value="s">Sistema</option></select></label>
  <div class="seg" id="vs" role="group" aria-label="Vista"></div>
  <button id="pkb" class="btn packbtn" type="button" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M10 3v4M13 3v4"/></svg><span id="pkn">Pack</span><span class="mini" id="pkm"><i></i></span></button>
+ <a id="imp" class="btn" href="setup.html" hidden title="Cambia archivio, cartelle, accesso e Gioca"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Impostazioni</a>
 </header>
 <div id="av" class="warn" hidden>Pack non salvati sul NAS: il NAS non è raggiungibile. Le modifiche restano in questo browser.</div>
 <div class="body">
@@ -592,6 +593,7 @@ function applicaUI(rt,p,id,r){
   msg.textContent='Fatto: '+v.aggiunti.toLocaleString('it')+' file copiati, '+v.tolti.toLocaleString('it')+' spostati'+(v.cestino?' in «'+v.cestino+'» sulla scheda':'')+'. Rifai la sincronizzazione per verificare che la scheda sia allineata.'}
  box.append(l1,l2,bt,msg);rt.appendChild(box)}
 
+if(['localhost','127.0.0.1','[::1]'].includes(location.hostname))$('imp').hidden=false;
 caricaPack();
 </script>
 </body>

@@ -83,7 +83,7 @@ def thumb(args):
     except Exception:
         return False
 
-def genera(cfg):
+def genera(cfg, avanza=None):
     root, out = cfg.archivio, cfg.dati
     os.makedirs(out, exist_ok=True)
     skip = set(cfg['catalogo']['ignora'])
@@ -92,7 +92,10 @@ def genera(cfg):
     solo_ext = {k: v.lower() for k, v in cfg['catalogo']['solo_estensione'].items()}
     giocabili = cfg['gioca']['sistemi'] if cfg['gioca']['abilitato'] else []
     games, jobs, descr = [], [], {}
-    for s in sorted(os.listdir(root)):
+    elenco = sorted(os.listdir(root))
+    for k, s in enumerate(elenco):
+        if avanza:
+            avanza(s, k, len(elenco))
         d = os.path.join(root, s)
         if s in skip or s.startswith(('.', '_')) or not os.path.isdir(d):
             continue
@@ -166,6 +169,8 @@ def genera(cfg):
                 jobs.append((img, os.path.join(out, riga['i'])))
             games.append(riga)
 
+    if avanza:
+        avanza('immagini', len(elenco), len(elenco))
     with ThreadPoolExecutor(8) as ex:
         ok = list(ex.map(thumb, jobs))
     perse = {j[1] for j, o in zip(jobs, ok) if not o}

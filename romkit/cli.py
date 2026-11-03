@@ -6,7 +6,7 @@ from . import config as C
 def _cfg(a):
     f = a.config
     if not os.path.exists(f):
-        sys.exit(f'Config non trovata: {f}. Copia config.example.toml in config.toml e adattala.')
+        sys.exit(f'Config non trovata: {f}. Avvia "romkit serve" per la configurazione guidata, oppure copia config.example.toml in config.toml.')
     c = C.carica(f)
     if getattr(a, 'archivio', None):
         c.archivio = os.path.abspath(os.path.expanduser(a.archivio))
@@ -21,6 +21,8 @@ def main(argv=None):
     sub = p.add_subparsers(dest='cmd', required=True)
     sub.add_parser('catalogo', help='genera i dati del catalogo dall\'archivio')
     sv = sub.add_parser('serve', help='avvia il server del catalogo')
+    sv.add_argument('--setup', action='store_true', help='riapre la configurazione guidata anche se config.toml esiste')
+    sv.add_argument('--porta', type=int, default=8765, help='porta della configurazione guidata (predefinita 8765)')
     sv.add_argument('--archivio', help='usa questa cartella al posto di [archivio].percorso')
     d = sub.add_parser('demo', help='crea un archivio finto e una config di prova')
     d.add_argument('cartella', nargs='?', default='demo-lavoro')
@@ -39,6 +41,9 @@ def main(argv=None):
     if a.cmd == 'demo':
         from . import demo
         return demo.crea(a.cartella)
+    if a.cmd == 'serve' and (a.setup or not os.path.exists(a.config)):
+        from . import server
+        return server.serve_setup(os.path.abspath(a.config), porta=a.porta)
     cfg = _cfg(a)
     if a.cmd == 'catalogo':
         from . import catalogo

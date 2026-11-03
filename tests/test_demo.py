@@ -78,3 +78,37 @@ class Fumo(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class Guidata(unittest.TestCase):
+    def test_prima_configurazione(self):
+        from romkit import guidata
+        with tempfile.TemporaryDirectory() as t:
+            lav = os.path.join(t, 'lav')
+            cli.main(['demo', lav])
+            os.remove(os.path.join(lav, 'config.toml'))
+            arch = os.path.join(lav, 'EASYROMS')
+            s = guidata.scansiona(arch)
+            self.assertEqual((s['sistemi'], s['giochi'], s['valido']), (4, 10, True))
+            self.assertFalse(guidata.scansiona(os.path.join(arch, 'bios'))['valido'])
+            cf = os.path.join(t, 'config.toml')
+            with self.assertRaises(ValueError):
+                guidata.salva(cf, {'archivio': arch, 'dati': arch, 'pack': os.path.join(t, 'p')})
+            guidata.salva(cf, {'archivio': arch, 'dati': os.path.join(t, 'd'), 'pack': os.path.join(t, 'p'), 'porta': 8800, 'gioca': True})
+            c = config.carica(cf)
+            self.assertEqual((c.archivio, c['server']['host'], c['server']['porta'], c['gioca']['abilitato']),
+                             (arch, '127.0.0.1', 8800, True))
+            # rifacendo la procedura le impostazioni a mano restano e si crea la copia .bak
+            open(cf, 'a').write('\n[catalogo.sottocartelle]\n"pico-8" = "carts"\n')
+            guidata.salva(cf, {'archivio': arch, 'dati': os.path.join(t, 'd'), 'pack': os.path.join(t, 'p'), 'rete': True})
+            c = config.carica(cf)
+            self.assertEqual(c['catalogo']['sottocartelle'], {'pico-8': 'carts'})
+            self.assertEqual(c['server']['host'], '0.0.0.0')
+            self.assertTrue(os.path.exists(cf + '.bak'))
+            guidata.costruisci(cf)
+            import time
+            for _ in range(100):
+                if guidata.LAVORO['stato'] != 'in corso':
+                    break
+                time.sleep(0.1)
+            self.assertEqual((guidata.LAVORO['stato'], guidata.LAVORO['giochi']), ('finito', 10))

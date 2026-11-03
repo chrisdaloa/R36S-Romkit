@@ -38,6 +38,7 @@ class Config:
     archivio: str = ''
     dati: str = ''
     pack: str = ''
+    file: str = ''                          # percorso di config.toml
 
     def __getitem__(self, k):
         return self.dati_grezzi[k]
@@ -53,7 +54,7 @@ def carica(file):
     with open(file, 'rb') as fh:
         d = _merge(DEFAULT, tomllib.load(fh))
     base = os.path.dirname(file)
-    c = Config(d, base)
+    c = Config(d, base, file=file)
     c.archivio = _percorso(d['archivio']['percorso'], base) if d['archivio']['percorso'] else ''
     c.dati = _percorso(d['uscite']['dati'], base)
     c.pack = _percorso(d['uscite']['pack'], base)

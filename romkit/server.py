@@ -2,7 +2,7 @@
 import os, json, posixpath, tempfile, threading, time, uuid
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit, parse_qs
-from . import sd, sorgenti, sync, packs
+from . import sd, sorgenti, sync, packs, guidata
 
 WEB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'web')
 MAX_PACKS = 20 * 1024 * 1024
@@ -36,6 +36,92 @@ def _lancia_piano(cfg, nome, dove, pack):
             LAVORI[j].update(r)
     threading.Thread(target=corri, daemon=True).start()
     return j
+
+
+def _setup_api(h, metodo, file):
+    """Rotte /api/setup/*: navigatore cartelle, controllo archivio, schede, salvataggio, primo catalogo.
+    Solo da questo PC (loopback, stessa origine): scrivono la configurazione e leggono l'elenco delle cartelle."""
+    ru = urlsplit(h.path)
+    q = parse_qs(ru.query)
+    azione = ru.path[len('/api/setup/'):]
+    if not h._origine_ok():
+        return h.send_error(403)
+    corpo = {}
+    if metodo == 'POST':
+        n = int(h.headers.get('Content-Length') or 0)
+        if not 0 <= n <= 65536:
+            return h.send_error(413)
+        try:
+            corpo = json.loads(h.rfile.read(n) or b'{}')
+        except ValueError:
+            return h.send_error(400)
+    try:
+        if metodo == 'GET' and azione == 'attuale':
+            r = guidata.attuale(file)
+        elif metodo == 'GET' and azione == 'cartelle':
+            r = guidata.cartelle((q.get('p') or [''])[0])
+        elif metodo == 'GET' and azione == 'scansione':
+            r = guidata.scansiona((q.get('p') or [''])[0])
+        elif metodo == 'GET' and azione == 'volumi':
+            r = {'schede': guidata.volumi((q.get('p') or [''])[0])}
+        elif metodo == 'GET' and azione == 'lavoro':
+            r = dict(guidata.LAVORO)
+        elif metodo == 'POST' and azione == 'salva':
+            r = guidata.salva(file, corpo)
+            guidata.costruisci(file)
+        elif metodo == 'POST' and azione == 'fine':
+            r = {'ok': True}
+            guidata.riavvia(['-m', 'romkit.cli', '--config', file, 'serve'])
+        else:
+            return h.send_error(404)
+    except (ValueError, KeyError, TypeError, OSError) as e:
+        return h.send_error(400, str(e)[:150] or 'Richiesta non valida')
+    h._json(json.dumps(r, ensure_ascii=False).encode())
+
+
+def crea_setup(file):
+    """Handler della sola configurazione guidata, usato quando config.toml non esiste ancora."""
+    class S(SimpleHTTPRequestHandler):
+        def __init__(self, *a, **k):
+            super().__init__(*a, directory=WEB, **k)
+
+        def end_headers(self):
+            self.send_header('Cache-Control', 'no-cache')
+            super().end_headers()
+
+        def _json(self, dati):
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(dati)))
+            self.end_headers()
+            self.wfile.write(dati)
+
+        def _da_qui(self):
+            return self.client_address[0] in ('127.0.0.1', '::1')
+
+        def _origine_ok(self):
+            orig = self.headers.get('Origin')
+            return self._da_qui() and not (orig and orig.split('://', 1)[-1] != self.headers.get('Host'))
+
+        def do_GET(self):
+            if self.path.startswith('/api/setup/'):
+                return _setup_api(self, 'GET', file)
+            if self.path.split('?', 1)[0] in ('/', '/index.html'):
+                self.path = '/setup.html'
+            elif self.path.split('?', 1)[0] != '/setup.html':
+                return self.send_error(404)
+            super().do_GET()
+
+        def do_POST(self):
+            if self.path.startswith('/api/setup/'):
+                return _setup_api(self, 'POST', file)
+            self.send_error(405)
+    return S
+
+
+def serve_setup(file, host='127.0.0.1', porta=8765):
+    print(f'Prima configurazione: apri http://{host}:{porta}/ nel browser  (Ctrl+C per fermare)')
+    ThreadingHTTPServer((host, porta), crea_setup(file)).serve_forever()
 
 
 def crea(cfg):
@@ -160,6 +246,8 @@ def crea(cfg):
 
         def do_GET(self):
             ru = urlsplit(self.path)
+            if ru.path.startswith('/api/setup/'):
+                return _setup_api(self, 'GET', cfg.file)
             if ru.path == '/api/sync':
                 return self._sync_stato(parse_qs(ru.query))
             if ru.path == '/api/volumi':
@@ -234,6 +322,8 @@ def crea(cfg):
             self.end_headers()
 
         def do_POST(self):
+            if self.path.startswith('/api/setup/'):
+                return _setup_api(self, 'POST', cfg.file)
             if urlsplit(self.path).path == '/api/sync':
                 return self._sync_avvia()
             if urlsplit(self.path).path == '/api/sync/applica':
