@@ -16,7 +16,7 @@ html,body{margin:0;height:100%;background:#000;color:#ddd;font:15px system-ui,sa
 <div id="game"></div>
 <script>
 const q=new URLSearchParams(location.search),s=q.get('s'),f=q.get('f');
-const CORE={nes:'nes',snes:'snes',gb:'gb',gbc:'gb',gba:'gba',megadrive:'segaMD',mastersystem:'segaMS',gamegear:'segaGG',pcengine:'pce',ngp:'ngp',ngpc:'ngp'};
+const CORE={nes:'nes',famicom:'nes',snes:'snes',sfc:'snes',gb:'gb',gbc:'gb',gba:'gba',megadrive:'segaMD',genesis:'segaMD',mastersystem:'segaMS','sg-1000':'segaMS',gamegear:'segaGG',pcengine:'pce',supergrafx:'pce',turbografx:'pce',ngp:'ngp',ngpc:'ngp',atari2600:'atari2600',atari5200:'atari5200',atari7800:'atari7800',atarilynx:'lynx',virtualboy:'vb',wonderswan:'ws',wonderswancolor:'ws',coleco:'coleco',sega32x:'sega32x',segacd:'segaCD',psx:'psx'};
 document.getElementById('tit').textContent=f||'';
 document.title='Gioca – '+(f||'');
 EJS_player='#game';

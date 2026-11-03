@@ -32,7 +32,8 @@ porta = 8765
 # Pulsante «Gioca» nel browser (EmulatorJS). Spento di default: serve le ROM a chiunque
 # raggiunga il server. Accendilo solo in rete locale fidata.
 abilitato = false
-sistemi = ["nes", "snes", "gb", "gbc", "gba", "megadrive", "mastersystem", "gamegear", "pcengine", "ngp", "ngpc"]
+sistemi = ["nes", "famicom", "snes", "sfc", "gb", "gbc", "gba", "megadrive", "genesis", "mastersystem", "sg-1000", "gamegear", "pcengine", "supergrafx", "turbografx", "ngp", "ngpc", "atari2600", "atari5200", "atari7800", "atarilynx", "virtualboy", "wonderswan", "wonderswancolor", "coleco", "sega32x"]
+# Opzionali (pesanti, servono i bios in bios/): "segacd", "psx"
 
 [sd]
 # Destinazione predefinita della copia di un pack.

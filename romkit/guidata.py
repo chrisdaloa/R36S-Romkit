@@ -4,7 +4,7 @@ Le funzioni qui sono chiamate dal server, che le espone solo a chi scrive da que
 import os, re, sys, threading, time
 from . import config as C, sorgenti, catalogo
 
-SISTEMI_GIOCA = ['nes', 'snes', 'gb', 'gbc', 'gba', 'megadrive', 'mastersystem', 'gamegear', 'pcengine', 'ngp', 'ngpc']
+SISTEMI_GIOCA = ['nes', 'famicom', 'snes', 'sfc', 'gb', 'gbc', 'gba', 'megadrive', 'genesis', 'mastersystem', 'sg-1000', 'gamegear', 'pcengine', 'supergrafx', 'turbografx', 'ngp', 'ngpc', 'atari2600', 'atari5200', 'atari7800', 'atarilynx', 'virtualboy', 'wonderswan', 'wonderswancolor', 'coleco', 'sega32x']
 LAVORO = {}                    # stato del catalogo in costruzione
 _LOCK = threading.Lock()
 

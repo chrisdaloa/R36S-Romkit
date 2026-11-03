@@ -196,7 +196,7 @@ function p3(c){
 
 /* 5 gioca */
 function p4(c){
- c.innerHTML=`<h1>${T('Giocare dal browser?')}</h1><p class="sotto">${T('Il pulsante «Gioca» apre un gioco direttamente nella pagina, con un emulatore integrato (per i sistemi a 8 e 16 bit e i portatili Nintendo).')}</p>
+ c.innerHTML=`<h1>${T('Giocare dal browser?')}</h1><p class="sotto">${T('Il pulsante «Gioca» apre un gioco direttamente nella pagina, con un emulatore integrato (per i sistemi classici a 8 e 16 bit e per i portatili).')}</p>
  <label class="scelta"><input type="radio" name="g" value="0" ${S.gioca?'':'checked'}><div><b>${T('No, per ora')}</b><span>${T('Puoi attivarlo in seguito rifacendo questa procedura.')}</span></div></label>
  <label class="scelta"><input type="radio" name="g" value="1" ${S.gioca?'checked':''}><div><b>${T('Sì, attiva «Gioca»')}</b><span>${T('Il server rende scaricabili i file delle ROM di quei sistemi.')}</span></div></label>
  <div class="avviso" id="av" ${S.gioca&&S.rete?'':'hidden'}>${T('Hai scelto anche l\'accesso dalla rete: chiunque sia collegato alla tua rete potrà scaricare quelle ROM. Meglio attivarlo solo se la rete è fidata.')}</div>`+nav(true,true);
