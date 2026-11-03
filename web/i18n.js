@@ -127,7 +127,7 @@
   'Costruzione del catalogo':'Building the catalogue','({f} di {n} cartelle)':'({f} of {n} folders)','{n} secondi trascorsi':'{n} seconds elapsed',
   'Catalogo pronto: {g} giochi, {i} con immagine.':'Catalogue ready: {g} games, {i} with image.','Apri il catalogo':'Open the catalogue','Avvio del catalogo…':'Starting the catalogue…','Riprova':'Try again',
   'Scegli una cartella':'Choose a folder','Annulla':'Cancel','Usa questa cartella':'Use this folder','‹ Cartella superiore':'‹ Parent folder','Nessuna sottocartella.':'No subfolders.',
-  'Avanzamento':'Progress','Errore {c}':'Error {c}',
+  'Avanzamento':'Progress','← Catalogo':'← Catalogue','Schermo intero':'Full screen','Tasto F':'F key','Comandi: frecce, Z/X = B/A, Invio = Start, Maiusc = Select':'Controls: arrows, Z/X = B/A, Enter = Start, Shift = Select','Errore {c}':'Error {c}',
  };
  // messaggi del server con valori dentro: [espressione, sostituzione]
  const RX=[
