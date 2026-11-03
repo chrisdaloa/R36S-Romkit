@@ -41,15 +41,17 @@ def crea(cfg):
             self.wfile.write(dati)
 
         def _sd(self, q):
-            # sola lettura; il browser indica solo il nome di una sorgente configurata
-            sorg = sorgenti.tutte(cfg)
+            # sola lettura; il browser indica solo il nome di una sorgente registrata
             if not q.get('sorgente'):
-                return self._json(json.dumps(list(sorg)).encode())
+                return self._json(json.dumps(sorgenti.elenco(cfg), ensure_ascii=False).encode())
             nome = q['sorgente'][0]
-            if nome not in sorg:
+            risolte = sorgenti.risolte(cfg)
+            if nome not in risolte:
                 return self.send_error(404, 'Sorgente sconosciuta')
+            if risolte[nome] is None:
+                return self.send_error(503, 'Scheda non collegata')
             try:
-                r = sd.analizza(cfg, sorg[nome], (q.get('pack') or [None])[0] or None)
+                r = sd.analizza(cfg, risolte[nome], (q.get('pack') or [None])[0] or None)
             except (OSError, KeyError, SystemExit) as e:
                 return self.send_error(502, str(e)[:200] or 'SD non raggiungibile')
             r['dettagli'] = r['dettagli'][:2000]
@@ -59,7 +61,7 @@ def crea(cfg):
         def do_GET(self):
             ru = urlsplit(self.path)
             if ru.path == '/api/volumi':
-                return self._json(json.dumps({'volumi': sorgenti.volumi(cfg), 'salvate': sorgenti.salvate(cfg),
+                return self._json(json.dumps({'schede': sorgenti.schede(cfg), 'salvate': sorgenti.salvate(cfg),
                                               'modificabile': locale}).encode())
             if ru.path == '/api/sd':
                 return self._sd(parse_qs(ru.query))
@@ -103,7 +105,7 @@ def crea(cfg):
             return bool(locale) and not (orig and orig.split('://', 1)[-1] != self.headers.get('Host'))
 
         def _sorgente(self, agg):
-            # il browser indica un nome e un percorso tra i volumi rilevati, mai un percorso libero
+            # il browser indica un nome e l'UUID di una scheda rilevata, mai un percorso
             if urlsplit(self.path).path != '/api/sorgenti':
                 return self.send_error(405)
             if not self._origine_ok():
@@ -114,7 +116,7 @@ def crea(cfg):
             try:
                 d = json.loads(self.rfile.read(n))
                 if agg:
-                    sorgenti.aggiungi(cfg, d['nome'], d['percorso'])
+                    sorgenti.aggiungi(cfg, d['nome'], d['uuid'])
                 else:
                     sorgenti.rimuovi(cfg, d['nome'])
             except (ValueError, KeyError, TypeError) as e:

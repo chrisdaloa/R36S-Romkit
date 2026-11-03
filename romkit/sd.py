@@ -69,6 +69,17 @@ def _gb(n):
     return f'{n / 1e9:7.2f} GB'
 
 
+def _spazio_ssh(dove):
+    host, _, path = dove.partition(':')
+    try:
+        r = subprocess.run(['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8', host, f'df -B1 --output=used,avail {path!r} | tail -n 1'],
+                           capture_output=True, text=True, timeout=30)
+        usati, liberi = r.stdout.split()
+        return {'usati': int(usati), 'liberi': int(liberi)}
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
 def analizza(cfg, dove, pack=None):
     """Dati strutturati del riepilogo e del confronto (pack se indicato, altrimenti archivio)."""
     sd = inventario(cfg, dove)
@@ -76,6 +87,10 @@ def analizza(cfg, dove, pack=None):
     if os.path.isdir(dove):
         st = os.statvfs(dove)
         out['spazio'] = {'usati': (st.f_blocks - st.f_bfree) * st.f_frsize, 'liberi': st.f_bavail * st.f_frsize}
+    elif ':' in dove:
+        sp = _spazio_ssh(dove)
+        if sp:
+            out['spazio'] = sp
     if pack:
         from .packs import carica_packs
         voluto = {}

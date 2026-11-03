@@ -95,7 +95,7 @@ button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(
 <label>Riserva <input id="pris" type="number" min="0" step="1"> GB</label>
 <div id="bar"><i></i></div><span id="bt"></span>
 <button id="pa">Aggiungi i risultati</button><button id="pr">Togli i risultati</button>
-<button id="ps">Riepilogo</button><select id="sds" aria-label="SD o console" hidden></select><button id="pc" hidden>Controlla SD</button><button id="sa" hidden title="Aggiungi una SD tra i volumi montati">+ SD</button><button id="sx" hidden title="Rimuovi la sorgente scelta (solo quelle aggiunte da qui)">− SD</button><span id="sf" hidden><select id="vol" aria-label="Volume rilevato"></select> <input id="nm" placeholder="Nome (es. SD 64 GB)" maxlength="40"> <button id="ss">Salva</button></span><button id="pe">Esporta elenco</button><button id="pd">Elimina pack</button>
+<button id="ps">Riepilogo</button><select id="sds" aria-label="SD o console" hidden></select><button id="pc" hidden>Controlla SD</button><button id="sa" hidden title="Registra una scheda della console collegata">+ SD</button><button id="sx" hidden title="Rimuovi la sorgente scelta (solo quelle aggiunte da qui)">− SD</button><span id="sf" hidden><select id="vol" aria-label="Volume rilevato"></select> <input id="nm" placeholder="Nome (es. SD 64 GB)" maxlength="40"> <button id="ss">Salva</button></span><button id="pe">Esporta elenco</button><button id="pd">Elimina pack</button>
 </div>
 </header>
 <main id="g"></main>
@@ -193,7 +193,7 @@ function barra(){
  const p=P[pack],tot=selSz+p.ris*1e9,cap=p.cap*1e9;
  $('pnome').textContent=pack;$('pcap').value=p.cap;$('pris').value=p.ris;
  $('bar').firstChild.style.width=Math.min(100,tot/cap*100)+'%';$('bar').classList.toggle('ov',tot>cap);
- $('bt').textContent=sel.size.toLocaleString('it')+' giochi · '+gb(selSz)+' + riserva '+p.ris+' GB = '+gb(tot)+' di '+p.cap+' GB'+(tot>cap?' — SFORATO di '+gb(tot-cap):' — liberi '+gb(cap-tot))}
+ $('bt').textContent='Pack «'+pack+'»: '+sel.size.toLocaleString('it')+' giochi, '+gb(selSz)+' dall\'archivio + riserva '+p.ris+' GB = '+gb(tot)+' (limite impostato '+p.cap+' GB)'+(tot>cap?' — SFORATO di '+gb(tot-cap):' — margine '+gb(cap-tot))}
 function attiva(n){
  pack=n;sel=new Set(n?P[n].ids:[]);selSz=0;
  if(n){const m=new Map(D.map(g=>[g.id,g.sz]));sel.forEach(i=>{if(m.has(i))selSz+=m.get(i);else sel.delete(i)})}
@@ -237,23 +237,28 @@ async function caricaPack(){
 
 // controllo della SD (sola lettura): il server legge la sorgente scelta e la confronta con il pack attivo
 let salvate={};
+const STATO={collegata:' — collegata',assente:' — non collegata'};
 async function sorgenti(sel){
  try{const r=await fetch('/api/sd');if(!r.ok)return;const n=await r.json();
   const v=await (await fetch('/api/volumi')).json();salvate=v.salvate;
-  $('sds').replaceChildren();n.forEach(x=>{const o=document.createElement('option');o.value=o.textContent=x;$('sds').appendChild(o)});
-  if(sel)$('sds').value=sel;
+  const prec=sel||$('sds').value;
+  $('sds').replaceChildren();n.forEach(x=>{const o=document.createElement('option');o.value=x.nome;o.textContent=x.nome+(STATO[x.stato]||'');$('sds').appendChild(o)});
+  if(prec&&n.some(x=>x.nome===prec))$('sds').value=prec;
   $('sds').hidden=$('pc').hidden=!n.length;$('sa').hidden=!v.modificabile;$('sx').hidden=!v.modificabile||!(($('sds').value) in salvate)}catch(e){}
 }
-if(location.protocol.startsWith('http'))sorgenti();
+if(location.protocol.startsWith('http')){sorgenti();window.addEventListener('focus',()=>sorgenti())}
 $('sds').onchange=()=>{$('sx').hidden=!($('sds').value in salvate)};
 $('sa').onclick=async()=>{
  const v=await (await fetch('/api/volumi')).json();
- if(!v.volumi.length){alert('Nessuna SD rilevata sotto /media, /run/media o /mnt (serve una cartella con le cartelle dei sistemi).');return}
- $('vol').replaceChildren();v.volumi.forEach(x=>{const o=document.createElement('option');o.value=o.textContent=x;$('vol').appendChild(o)});
+ const noti=new Set(Object.values(v.salvate).map(x=>x.uuid));
+ const nuove=v.schede.filter(x=>!noti.has(x.uuid));
+ if(!nuove.length){alert('Nessuna scheda nuova rilevata. Serve una scheda della console collegata e montata (partizioni BOOT e EASYROMS), oppure una partizione con le cartelle dei sistemi.');return}
+ $('vol').replaceChildren();nuove.forEach(x=>{const o=document.createElement('option');o.value=x.uuid;o.disabled=!x.percorso;
+  o.textContent=(x.etichetta||'senza nome')+' · '+gb(x.dimensione)+' · '+x.fs+(x.percorso?'':' · non montata')+(x.forza==='forte'?' · scheda della console':' · da verificare');$('vol').appendChild(o)});
  $('sf').hidden=false};
 $('ss').onclick=async()=>{
- const nome=$('nm').value.trim();if(!nome)return;
- const r=await fetch('/api/sorgenti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,percorso:$('vol').value})});
+ const nome=$('nm').value.trim();if(!nome||!$('vol').value)return;
+ const r=await fetch('/api/sorgenti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,uuid:$('vol').value})});
  if(!r.ok){alert('Non salvata: '+(r.statusText||r.status));return}
  $('sf').hidden=true;$('nm').value='';sorgenti(nome)};
 $('sx').onclick=async()=>{
@@ -270,7 +275,7 @@ $('pc').onclick=async()=>{
  h.textContent='«'+$('sds').value+'» rispetto al pack «'+pack+'»';
  const p=document.createElement('p');p.style.fontSize='13px';
  const tot={sd:0,atteso:0,manca:0,extra:0,diversi:0};Object.values(r.confronto).forEach(x=>{for(const k in tot)tot[k]+=x[k]});
- p.textContent=(r.spazio?gb(r.spazio.usati)+' usati, '+gb(r.spazio.liberi)+' liberi. ':'')+tot.sd.toLocaleString('it')+' giochi sulla SD, '+tot.atteso.toLocaleString('it')+' nel pack: '+
+ p.textContent=(r.spazio?'Spazio reale della SD: '+gb(r.spazio.usati)+' usati, '+gb(r.spazio.liberi)+' liberi. ':'')+tot.sd.toLocaleString('it')+' giochi sulla SD, '+tot.atteso.toLocaleString('it')+' nel pack: '+
   tot.manca.toLocaleString('it')+' da aggiungere, '+tot.extra.toLocaleString('it')+' in più, '+tot.diversi.toLocaleString('it')+' diversi.';
  const tb=document.createElement('table');const th=document.createElement('tr');
  ['Sistema','SD','Pack','Mancano','In più','Diversi'].forEach(t=>{const c=document.createElement('th');c.textContent=t;th.appendChild(c)});tb.appendChild(th);

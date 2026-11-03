@@ -1,7 +1,9 @@
-"""Sorgenti SD: quelle del config.toml piu' quelle aggiunte dalla pagina (sorgenti.json accanto al config)."""
-import os, json, re, tempfile
+"""Sorgenti SD: quelle del config.toml (percorso fisso o utente@host:/percorso) piu' le schede
+riconosciute per identita' del volume (UUID) e salvate in sorgenti.json accanto al config."""
+import os, json, re, subprocess, tempfile
 
 RADICI = ('/media', '/run/media', '/mnt')
+MIN_SISTEMI = 5      # cartelle di sistema minime perche' una partizione senza firma sia proposta
 NOME = re.compile(r'^[\w .()+-]{1,40}$')
 
 
@@ -10,15 +12,18 @@ def _file(cfg):
 
 
 def salvate(cfg):
+    """{nome: {'uuid': .., 'etichetta': ..}}; le voci vecchie con solo il percorso sono ignorate."""
     try:
         d = json.load(open(_file(cfg)))
-        return {k: v for k, v in d.items() if isinstance(k, str) and isinstance(v, str)}
     except (OSError, ValueError):
         return {}
+    return {k: v for k, v in d.items() if isinstance(k, str) and isinstance(v, dict) and isinstance(v.get('uuid'), str)}
 
 
-def tutte(cfg):
-    return {**cfg['sd']['sorgenti'], **salvate(cfg)}
+def _lsblk():
+    r = subprocess.run(['lsblk', '-J', '-b', '-o', 'NAME,TYPE,UUID,LABEL,FSTYPE,SIZE,MOUNTPOINTS'],
+                       capture_output=True, text=True, timeout=15)
+    return json.loads(r.stdout or '{}')
 
 
 def _sistemi(cfg):
@@ -30,36 +35,63 @@ def _sistemi(cfg):
 
 
 def valida(cfg, percorso):
-    """Cartella che contiene almeno una cartella di sistema dell'archivio."""
+    """Cartella con almeno MIN_SISTEMI cartelle di sistema dell'archivio (non basta una come 'dos')."""
     try:
-        return bool(_sistemi(cfg) & set(os.listdir(percorso)))
+        return len(_sistemi(cfg) & set(os.listdir(percorso))) >= MIN_SISTEMI
     except OSError:
         return False
 
 
-def _montati():
-    try:
-        for r in open('/proc/mounts'):
-            p = r.split()[1].replace('\\040', ' ')
-            if p.startswith(RADICI):
-                yield p
-    except OSError:
-        return
+def _mount(p):
+    m = [x for x in (p.get('mountpoints') or []) if x and x.startswith(RADICI)]
+    return sorted(m, key=lambda x: (not x.startswith('/media'), x))[0] if m else None
 
 
-def volumi(cfg):
-    """Candidati: volumi montati sotto /media, /run/media, /mnt (e le loro sottocartelle dirette)."""
-    out, visti = [], set()
-    for m in _montati():
-        try:
-            cand = [m] + [e.path for e in os.scandir(m) if e.is_dir() and not e.name.startswith('.')]
-        except OSError:
-            continue
-        for c in cand:
-            if c not in visti and valida(cfg, c):
-                visti.add(c)
-                out.append(c)
+def schede(cfg, dati=None):
+    """Schede della console rilevate. forza='forte': stesso disco con partizione di avvio e partizione
+    dei giochi (firma in [sd].firma); 'debole': solo una partizione montata con cartelle di sistema."""
+    firma = cfg['sd']['firma']
+    out = []
+    for disco in (dati if dati is not None else _lsblk()).get('blockdevices', []):
+        parti = [c for c in disco.get('children', []) if c.get('uuid')]
+        avvio = any(c.get('label') == firma['avvio'] for c in disco.get('children', []))
+        for c in parti:
+            perc = _mount(c)
+            forte = avvio and c.get('label') == firma['dati']
+            if not forte and not (perc and valida(cfg, perc)):
+                continue
+            out.append({'uuid': c['uuid'], 'etichetta': c.get('label') or '', 'fs': c.get('fstype') or '',
+                        'dimensione': int(c.get('size') or 0), 'percorso': perc,
+                        'forza': 'forte' if forte else 'debole'})
     return out
+
+
+def risolte(cfg, dati=None):
+    """{nome: percorso o None}: None se la scheda non e' collegata/montata."""
+    out = dict(cfg['sd']['sorgenti'])
+    if salvate(cfg):
+        per_uuid = {s['uuid']: s['percorso'] for s in schede(cfg, dati)}
+        for nome, v in salvate(cfg).items():
+            out[nome] = per_uuid.get(v['uuid'])
+    return out
+
+
+def elenco(cfg, dati=None):
+    """[{nome, stato}]: 'collegata', 'assente' o None quando non si sa (console via SSH)."""
+    out = []
+    for nome, perc in risolte(cfg, dati).items():
+        if perc is None:
+            stato = 'assente'
+        elif ':' in perc and not os.path.isabs(perc):
+            stato = None
+        else:
+            stato = 'collegata' if os.path.isdir(perc) else 'assente'
+        out.append({'nome': nome, 'stato': stato})
+    return out
+
+
+def percorso(cfg, nome):
+    return risolte(cfg).get(nome)
 
 
 def _scrivi(cfg, d):
@@ -69,17 +101,19 @@ def _scrivi(cfg, d):
     os.replace(tmp, _file(cfg))
 
 
-def aggiungi(cfg, nome, percorso):
-    """Il percorso deve essere uno dei volumi rilevati; solleva ValueError con il motivo."""
+def aggiungi(cfg, nome, uuid):
+    """La scheda deve essere tra quelle rilevate; solleva ValueError con il motivo."""
     if not NOME.match(nome or ''):
         raise ValueError('Nome non valido (lettere, numeri, spazi, max 40)')
-    percorso = os.path.normpath(percorso or '')
-    if percorso not in volumi(cfg):
-        raise ValueError('Percorso non tra i volumi rilevati')
-    if nome in cfg['sd']['sorgenti']:
-        raise ValueError('Nome gia\' usato dalla configurazione')
+    s = {x['uuid']: x for x in schede(cfg)}.get(uuid)
+    if not s:
+        raise ValueError('Scheda non tra quelle rilevate')
+    if nome in cfg['sd']['sorgenti'] or nome in salvate(cfg):
+        raise ValueError('Nome gia\' in uso')
+    if any(v['uuid'] == uuid for v in salvate(cfg).values()):
+        raise ValueError('Scheda gia\' registrata')
     d = salvate(cfg)
-    d[nome] = percorso
+    d[nome] = {'uuid': uuid, 'etichetta': s['etichetta']}
     _scrivi(cfg, d)
 
 

@@ -35,23 +35,40 @@ class Fumo(unittest.TestCase):
             self.assertIn(('+', 'gba', 'Tiny Hero (Europe).zip'), dett)
             self.assertIn(('-', 'snes', 'Pixel Kart (USA).zip'), dett)
 
-    def test_sorgenti_salvate(self):
+    def test_sorgenti_per_uuid(self):
         from romkit import sorgenti
         with tempfile.TemporaryDirectory() as t:
             lav = os.path.join(t, 'lav')
             cli.main(['demo', lav])
             cfg = config.carica(os.path.join(lav, 'config.toml'))
+            sdp = os.path.join(t, 'media', 'EASYROMS')
+            os.makedirs(sdp)
+            def lsb(mount):
+                return {'blockdevices': [
+                    {'name': 'sdx', 'type': 'disk', 'children': [
+                        {'name': 'sdx1', 'label': 'BOOT', 'uuid': 'AAAA-0001', 'fstype': 'vfat', 'size': 1, 'mountpoints': [None]},
+                        {'name': 'sdx3', 'label': 'EASYROMS', 'uuid': 'BBBB-0002', 'fstype': 'exfat', 'size': 5, 'mountpoints': [mount]}]},
+                    {'name': 'sdy', 'type': 'disk', 'children': [
+                        {'name': 'sdy1', 'label': 'CHIAVETTA', 'uuid': 'CCCC-0003', 'fstype': 'vfat', 'size': 1, 'mountpoints': ['/mnt/chiavetta']}]}]}
+            # scheda vuota ma con la firma BOOT+EASYROMS: riconosciuta anche se non montata
+            s = sorgenti.schede(cfg, lsb(None))
+            self.assertEqual([x['uuid'] for x in s], ['BBBB-0002'])
+            self.assertEqual(s[0]['forza'], 'forte')
+            self.assertIsNone(s[0]['percorso'])
             with self.assertRaises(ValueError):
-                sorgenti.aggiungi(cfg, 'X', '/etc')          # non e' un volume rilevato
-            sorgenti.volumi = lambda c: [os.path.join(t, 'sd')]
-            sorgenti._scrivi(cfg, {'A': '/x'})
-            self.assertEqual(sorgenti.tutte(cfg)['A'], '/x')
-            sorgenti.aggiungi(cfg, 'B', os.path.join(t, 'sd'))
-            self.assertIn('B', sorgenti.salvate(cfg))
-            sorgenti.rimuovi(cfg, 'B')
-            self.assertNotIn('B', sorgenti.salvate(cfg))
+                sorgenti.aggiungi(cfg, '../x', 'BBBB-0002')
             with self.assertRaises(ValueError):
-                sorgenti.aggiungi(cfg, '../x', os.path.join(t, 'sd'))
+                sorgenti.aggiungi(cfg, 'X', 'CCCC-0003')       # non e' una scheda della console
+            sorgenti.schede = lambda c, dati=None: s
+            sorgenti.aggiungi(cfg, 'SD prova', 'BBBB-0002')
+            self.assertIsNone(sorgenti.risolte(cfg, lsb(None))['SD prova'])        # non collegata
+            sorgenti.schede = lambda c, dati=None: [dict(s[0], percorso=sdp)]
+            self.assertEqual(sorgenti.risolte(cfg)['SD prova'], sdp)               # cambia il mount, resta la stessa
+            self.assertIn({'nome': 'SD prova', 'stato': 'collegata'}, sorgenti.elenco(cfg))
+            with self.assertRaises(ValueError):
+                sorgenti.aggiungi(cfg, 'Altra', 'BBBB-0002')    # gia' registrata
+            sorgenti.rimuovi(cfg, 'SD prova')
+            self.assertNotIn('SD prova', sorgenti.salvate(cfg))
 
 
 if __name__ == '__main__':
