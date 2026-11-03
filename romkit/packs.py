@@ -119,9 +119,9 @@ def prepara(cfg, nome, cartella, libero=None, avanza=None):
                 root.remove(g)
                 continue
             tenuti += 1
-            nome = g.find('name')
-            if nome is not None and nome.text:
-                nome.text = senza_numero(s, nome.text, os.path.basename(g.findtext('path') or ''))
+            voce = g.find('name')
+            if voce is not None and voce.text:
+                voce.text = senza_numero(s, voce.text, os.path.basename(g.findtext('path') or ''))
             for tag in TAG_MEDIA:
                 r = (g.findtext(tag) or '').strip()
                 if r and not r.startswith('/'):
