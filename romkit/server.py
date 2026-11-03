@@ -24,7 +24,7 @@ def _lancia_piano(cfg, nome, dove, pack):
 
     def corri():
         try:
-            p = sync.piano(cfg, dove, pack)
+            p = sync.piano(cfg, dove, pack, stato=LAVORI[j])
             elenco = {k: p[k][:3000] for k in ('aggiungi', 'aggiorna', 'togli')}
             n = {k: len(p[k]) for k in ('aggiungi', 'aggiorna', 'togli')}
             LAVORI[j]['piano'] = p

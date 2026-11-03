@@ -38,7 +38,7 @@ def carica_packs(cfg):
         return json.load(fh)
 
 
-def prepara(cfg, nome, cartella, libero=None):
+def prepara(cfg, nome, cartella, libero=None, avanza=None):
     """Crea in <pack>/<cartella>: gamelist/, lista-copia.txt, report.txt. Restituisce il riepilogo."""
     arch, escludi = cfg.archivio, cfg['pack']['escludi']
     sottocart = cfg['catalogo']['sottocartelle']
@@ -75,7 +75,9 @@ def prepara(cfg, nome, cartella, libero=None):
         if ILLEGALI.search(b) or len(b.encode()) > 255:
             anomalie.append(f'NOME NON VALIDO PER exFAT  {rel}')
 
-    for s in sorted(per_sis):
+    for k, s in enumerate(sorted(per_sis)):
+        if avanza:
+            avanza(s, k, len(per_sis))
         base = os.path.join(s, sottocart.get(s, ''))
         sdir = os.path.join(arch, base)
         if not os.path.isdir(sdir):

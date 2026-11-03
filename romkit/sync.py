@@ -1,5 +1,5 @@
 """Piano di sincronizzazione di una SD con un pack: cosa aggiungere, aggiornare, togliere. Solo lettura."""
-import os, fnmatch, subprocess, shutil, time
+import os, re, fnmatch, subprocess, shutil, time
 from . import packs
 
 SUPPORTO = ('.txt', '.cfg', '.ini', '.sh', '.db', '.xml', '.json')   # file di configurazione degli emulatori: mai da togliere
@@ -10,7 +10,7 @@ def _remoto(dove):
     return ':' in dove and not os.path.isabs(dove)
 
 
-def _file_sd(dove, escludi, ignora):
+def _file_sd(dove, escludi, ignora, stato=None):
     """{percorso relativo: dimensione} dei file nelle cartelle dei sistemi della SD."""
     out = {}
     if _remoto(dove):
@@ -31,25 +31,33 @@ def _file_sd(dove, escludi, ignora):
                 for f in ff:
                     p = os.path.join(r, f)
                     out[os.path.relpath(p, dove)] = os.path.getsize(p)
+                if stato is not None:
+                    stato['contati'] = len(out)
     return {p: n for p, n in out.items()
             if p.split('/', 1)[0] not in ignora and not any(fnmatch.fnmatch(os.path.basename(p), e) for e in escludi)}
 
 
-def piano(cfg, dove, pack, cartella='_anteprima'):
+def piano(cfg, dove, pack, cartella='_anteprima', stato=None):
     """Confronta file per file la SD con la lista di copia del pack.
 
     Si toglie solo cio' che sta in un sistema del pack, esiste anche nell'archivio con lo stesso percorso e non e' nel pack:
     salvataggi, cartelle di servizio, sistemi fuori dal pack e file estranei all'archivio non vengono mai proposti."""
-    r = packs.prepara(cfg, pack, cartella)
+    stato = stato if stato is not None else {}
+    stato.update(fase='pack', passo=1)
+    r = packs.prepara(cfg, pack, cartella, avanza=lambda s, k, n: stato.update(sistema=s, fatti=k, totale=n))
     with open(os.path.join(r['dest'], 'lista-copia.txt')) as fh:
         voluto = {x for x in fh.read().split('\n') if x}
     arch = cfg.archivio
     sistemi = {i.split('/', 1)[0] for i in packs.carica_packs(cfg)[pack]['ids']} - set(cfg['sync']['non_toccare'])
     ignora = set(cfg['catalogo']['ignora']) | set(cfg['pack']['servizio'])
-    sd = _file_sd(dove, cfg['pack']['escludi'], ignora)
+    stato.update(fase='scheda', passo=2, contati=0)
+    sd = _file_sd(dove, cfg['pack']['escludi'], ignora, stato)
+    stato.update(fase='confronto', passo=3, fatti=0, totale=len(voluto))
     sd_tutti = sd
     agg, upd, tog = [], [], []
-    for p in sorted(voluto):
+    for k, p in enumerate(sorted(voluto)):
+        if k % 500 == 0:
+            stato['fatti'] = k
         try:
             n = os.path.getsize(os.path.join(arch, p))
         except OSError:
@@ -110,7 +118,7 @@ def applica(cfg, dove, piano, aggiungi=True, togli=True, sistemi=None, stato=Non
             raise SystemExit(f'Spazio insufficiente: servono {servono / 1e9:.1f} GB, disponibili {libero / 1e9:.1f} GB')
     data = time.strftime('%Y-%m-%d_%H%M%S')
     log = [f'Sincronizzazione {data} - {piano["pack"]} -> {dove}']
-    stato.update(fase='togli', fatti=0, totale=len(tog))
+    stato.update(fase='togli', fatti=0, totale=len(tog), passi=(bool(tog) + bool(agg) + 1))
     for i, (p, n) in enumerate(tog):
         src = os.path.join(dove, p)
         dst = os.path.join(dove, '_rimossi', data, p)
@@ -125,10 +133,26 @@ def applica(cfg, dove, piano, aggiungi=True, togli=True, sistemi=None, stato=Non
         with open(lista, 'w') as fh:
             fh.write('\n'.join(p for p, _ in agg) + '\n')
         ex = [f'--exclude={e}' for e in cfg['pack']['escludi']]
-        r = subprocess.run(['rsync', '-rt', '--no-perms', '--no-owner', '--no-group', *ex, f'--files-from={lista}',
-                            cfg.archivio + '/', dove + '/'], capture_output=True, text=True)
-        if r.returncode:
-            raise SystemExit('Copia interrotta: ' + (r.stderr.strip()[-300:] or f'rsync {r.returncode}'))
+        stato.update(byte_tot=sum(n for _, n in agg), byte_fatti=0, pct=0, velocita='', resta='')
+        pr = subprocess.Popen(['rsync', '-rt', '--no-perms', '--no-owner', '--no-group', '--info=progress2,name0', *ex,
+                               f'--files-from={lista}', cfg.archivio + '/', dove + '/'],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        buf = ''
+        while True:
+            c = pr.stdout.read(1)
+            if not c:
+                break
+            if c in '\r\n':
+                m = re.match(r'\s*([\d.,]+)\s+(\d+)%\s+(\S+/s)\s+(\d+:\d+:\d+)', buf)
+                if m:
+                    stato.update(byte_fatti=int(re.sub(r'\D', '', m.group(1))), pct=int(m.group(2)),
+                                 velocita=m.group(3), resta=m.group(4))
+                buf = ''
+            else:
+                buf += c
+        err = pr.stderr.read()
+        if pr.wait():
+            raise SystemExit('Copia interrotta: ' + (err.strip()[-300:] or f'rsync {pr.returncode}'))
         log += [f'+ {p}' for p, _ in agg]
     stato['fase'] = 'gamelist'
     gl = os.path.join(piano['cartella'], 'gamelist')

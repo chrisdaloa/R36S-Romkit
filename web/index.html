@@ -98,6 +98,10 @@ body:not(.pk) .sel{display:none}
 .c.on .t{color:var(--ac)}
 body.pk .c:not(.on) .im,body.pk .c:not(.on) .tx{opacity:.6}
 body.pk .c:not(.on):hover .im,body.pk .c:not(.on):hover .tx{opacity:1}
+.prog{height:8px;border-radius:99px;background:var(--ln);overflow:hidden;margin:8px 0 2px}
+.prog i{display:block;height:100%;width:0;background:var(--ac);border-radius:99px;transition:width .4s}
+.prog.ind i{width:35%;animation:ind 1.4s ease-in-out infinite alternate}
+@keyframes ind{from{margin-left:0}to{margin-left:65%}}
 #più{display:block;margin:0 auto 40px}
 
 /* elenco */
@@ -470,12 +474,35 @@ $('pc').onclick=async()=>{
 };
 
 // sincronizzazione: il server calcola il piano in background (puo' richiedere alcuni minuti), la pagina lo interroga
+const sec=n=>{n=Math.round(n);return n>=60?Math.floor(n/60)+' min '+String(n%60).padStart(2,'0')+' s':n+' s'};
+const num=n=>(n||0).toLocaleString('it');
+// testo e barra del passo corrente; pct e' null quando la durata non e' stimabile
+function descrivi(v,t0){
+ const t=sec((Date.now()-t0)/1000),f=v.fase;let txt,pct=null,pre='';
+ if(v.tipo==='applica'){
+  const k=v.passi?' (passo '+({togli:1,copia:(v.passi>2?2:1),gamelist:v.passi}[f]||1)+' di '+v.passi+')':'';
+  if(f==='togli'){txt='Sposto in «_rimossi» i file da togliere: '+num(v.fatti)+' di '+num(v.totale);pct=v.totale?v.fatti/v.totale*100:null}
+  else if(f==='copia'){txt='Copio sulla scheda: '+(v.pct||0)+'%'+(v.byte_tot?' · '+gb(v.byte_fatti||0)+' di '+gb(v.byte_tot):'')+(v.velocita?' · '+v.velocita:'')+(v.resta&&v.resta!=='0:00:00'?' · restano '+v.resta.replace(/^0:/,''):'');pct=v.pct||0}
+  else if(f==='gamelist')txt='Aggiorno i gamelist della scheda';
+  else txt='Avvio';
+  return {txt:txt+k+' · '+t,pct};
+ }
+ const k=' (passo '+(v.passo||1)+' di 3)';
+ if(f==='pack'){txt='Preparo il pack'+(v.sistema?': sistema «'+v.sistema+'» ('+num((v.fatti||0)+1)+' di '+num(v.totale)+')':'');pct=v.totale?(v.fatti||0)/v.totale*100:null}
+ else if(f==='scheda')txt='Leggo i file della scheda: '+num(v.contati)+' trovati';
+ else if(f==='confronto'){txt='Confronto la scheda con il pack: '+num(v.fatti)+' di '+num(v.totale)+' file';pct=v.totale?(v.fatti||0)/v.totale*100:null}
+ else txt='Avvio il calcolo';
+ return {txt:txt+k+' · '+t,pct};
+}
+function barra(box,d){
+ box.p.textContent=d.txt;box.b.classList.toggle('ind',d.pct===null);box.b.firstChild.style.width=d.pct===null?'':Math.min(100,d.pct)+'%'}
+function creaBarra(p){const b=document.createElement('div');b.className='prog ind';b.appendChild(document.createElement('i'));p.after(b);return {p,b}}
 const SY={aggiungi:['Da aggiungere','var(--ok)'],aggiorna:['Da aggiornare','var(--ac)'],togli:['Da togliere','var(--er)']};
 $('sy').onclick=async()=>{
  const nome=$('sds').value,rt=$('rt');rt.replaceChildren();const h=document.createElement('h2');
  const p=document.createElement('p');p.style.fontSize='13px';p.className='note';rt.append(h,p);$('rs').hidden=false;
  h.textContent='Sincronizzazione di «'+nome+'» con «'+pack+'»';p.textContent='Calcolo in corso: confronto la scheda con il pack, può richiedere alcuni minuti.';
- let id,t0=Date.now();
+ let id,t0=Date.now();const br=creaBarra(p);
  try{const x=await fetch('/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sorgente:nome,pack})});
   if(!x.ok)throw new Error(x.status+' '+x.statusText);id=(await x.json()).id}
  catch(e){p.textContent='Non avviata: '+e.message;return}
@@ -486,7 +513,8 @@ $('sy').onclick=async()=>{
   try{const x=await fetch('/api/sync?id='+id);if(!x.ok)throw new Error(x.status+' '+x.statusText);r=await x.json()}
   catch(e){p.textContent='Calcolo interrotto: '+e.message;return}
   if(r.stato!=='in corso')break;
-  p.textContent='Calcolo in corso da '+Math.round((Date.now()-t0)/1000)+' s…'}
+  barra(br,descrivi(r,t0))}
+ br.b.remove();
  if(r.stato!=='finito'){p.textContent='Non riuscito: '+r.errore;return}
  const n=r.n,b=r.byte,netto=b.aggiungi+b.aggiorna-b.togli;
  p.textContent=n.aggiungi+n.aggiorna+n.togli?'Anteprima: nulla è stato modificato. Variazione di spazio sulla scheda: '+(netto>=0?'+':'−')+gb(Math.abs(netto))+'.':'La scheda è già allineata al pack.';
@@ -524,7 +552,7 @@ function applicaUI(rt,p,id,r){
  bt.onclick=async()=>{
   const nt=c2.checked&&!c2.disabled;
   if(!armato){armato=true;bt.textContent='Conferma: '+(c1.checked&&!c1.disabled?'copio i file scelti':'')+(c1.checked&&nt?' e ':'')+(nt?'sposto i file in _rimossi':'');return}
-  bt.disabled=true;msg.textContent='Avvio…';
+  bt.disabled=true;msg.textContent='Avvio…';const br=creaBarra(msg),t0=Date.now();
   const corpo={id,aggiungi:c1.checked&&!c1.disabled,togli:nt,sistemi:sistemi(),conferma_soglia:r.n.togli>0&&nt&&window._soglia===true};
   let x=await fetch('/api/sync/applica',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});
   if(x.status===409&&(await x.text()).includes('20%')){
@@ -535,7 +563,8 @@ function applicaUI(rt,p,id,r){
    await new Promise(f=>setTimeout(f,1500));
    try{const y=await fetch('/api/sync?id='+j);v=await y.json()}catch(e){msg.textContent='Collegamento perso: '+e.message;return}
    if(v.stato!=='in corso')break;
-   msg.textContent=({togli:'Sposto i file da togliere',copia:'Copio i file',gamelist:'Aggiorno i gamelist',avvio:'Avvio'})[v.fase]+(v.totale?' ('+v.fatti.toLocaleString('it')+' di '+v.totale.toLocaleString('it')+')':'')+'…'}
+   barra(br,descrivi(v,t0))}
+  br.b.remove();
   window._soglia=false;
   if(v.stato!=='finito'){msg.textContent='Interrotta: '+v.errore+' Rifai l\'anteprima prima di riprovare.';return}
   bt.remove();l1.remove();l2.remove();
