@@ -1,6 +1,7 @@
 """Preparazione di un pack: gamelist ridotti, elenco di copia e report. Non scrive mai nell'archivio."""
 import os, re, json, fnmatch, shutil, subprocess
 import xml.etree.ElementTree as ET
+from .titoli import senza_numero
 
 TAG_MEDIA = ('image', 'thumbnail', 'marquee', 'cover', 'video', 'fanart', 'titleshot', 'manual', 'wheel', 'screenshot')
 ILLEGALI = re.compile(r'[\\:*?"<>|]|[. ]$')   # non validi su exFAT/FAT
@@ -118,6 +119,9 @@ def prepara(cfg, nome, cartella, libero=None, avanza=None):
                 root.remove(g)
                 continue
             tenuti += 1
+            nome = g.find('name')
+            if nome is not None and nome.text:
+                nome.text = senza_numero(s, nome.text, os.path.basename(g.findtext('path') or ''))
             for tag in TAG_MEDIA:
                 r = (g.findtext(tag) or '').strip()
                 if r and not r.startswith('/'):

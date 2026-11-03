@@ -263,7 +263,12 @@ seg('vs',[['','<svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" r
 seg('pl',[['','Tutti'],['1','1'],['2','2+'],['4','4+']]);
 seg('mr',[['0','Tutti'],['3','3+ ★'],['4','4+ ★'],['4.5','4,5+ ★']],'0');
 seg('pf',[['','Tutti'],['in','Nel pack'],['out','Fuori']]);
-D.forEach(g=>{g.k=norm(g.t+' '+g.f);g.id=g.s+'/'+g.f});
+// toglie il numero d'ordine davanti al titolo (es. «0001 Rockman 1», «004 cawing») ma non i numeri veri (1942, 720 Degrees, 007, 1000 Miglia)
+function senzaNumero(g){
+ const m=g.t.match(/^(\d+)\s+(?=\S)/);if(!m)return g.t;
+ const n=m[1],r=g.t.slice(m[0].length),indice=n!=='007'&&((n[0]==='0'&&n.length>=3)||(g.s==='psp'&&n.length>=5)||(n.length===3&&g.f.startsWith(n+' ')&&!/\.(zip|7z)$/i.test(g.f)));
+ return indice&&r?r:g.t}
+D.forEach(g=>{g.t0=g.t;g.t=senzaNumero(g);g.k=norm(g.t0+' '+g.t+' '+g.f);g.id=g.s+'/'+g.f});
 const conta={};D.forEach(g=>conta[g.s]=(conta[g.s]||0)+1);
 function voceSistema(v,nome,n){const b=document.createElement('button');b.type='button';b.dataset.v=v;b.append(nome);const c=document.createElement('span');c.textContent=n.toLocaleString('it');b.appendChild(c);
  b.onclick=()=>{$('s').value=(v&&$('s').value===v)?'':v;filtra()};$('sl').appendChild(b)}
