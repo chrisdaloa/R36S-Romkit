@@ -7,6 +7,8 @@ Catalogo web e gestione di «pack» per le schede SD di console portatili con Ar
 Il programma lavora sul **tuo** archivio di ROM (una cartella per sistema, con `gamelist.xml` e immagini).
 Non include ROM, né le scarica.
 
+![Il catalogo con il pannello dei pack](docs/catalogo.jpg)
+
 ## Cosa fa
 - **Catalogo**: pagina web con ricerca, filtri (sistema, lingua, genere, anno, voto, giocatori), vista a griglia o lista, dettaglio.
 - **Pack**: scegli dal catalogo i giochi per una SD (es. 128 GB); il programma calcola lo spazio e crea gamelist ridotti, elenco di copia e report.

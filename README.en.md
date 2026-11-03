@@ -4,6 +4,8 @@ Web catalogue and «pack» management for SD cards of ArkOS/EmulationStation han
 
 It works on **your own** ROM collection (one folder per system, with `gamelist.xml` and images). It ships and downloads no ROMs.
 
+![The catalogue with the pack panel](docs/catalogo.jpg)
+
 ## Features
 - **Catalogue**: search, filters (system, language, genre, year, rating, players), grid or list view, details.
 - **Packs**: pick games for an SD card (e.g. 128 GB); size is computed and reduced gamelists, a copy list and a report are produced.
