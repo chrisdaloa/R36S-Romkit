@@ -24,6 +24,15 @@ romkit --config demo-work/config.toml serve      # http://127.0.0.1:8765/index.h
 3. Create a pack in the web page, then `romkit pack prepara "Pack name" FOLDER` and read `report.txt`.
 4. `romkit pack copia FOLDER` (dry-run), then add `--applica`.
 
+## Syncing a card with a pack
+In the "Pack" panel pick the pack and the card (mounted on this PC), then press **Sincronizza con il pack**.
+1. **Preview**: shows how many games would be added, updated or removed. Nothing is written. Progress is shown step by step.
+2. **Choose**: exclude whole systems, or do only additions or only removals.
+3. **Apply**: asks for a second confirmation, then copies (with speed and time left) and moves files.
+4. **Check**: sync again; it should report the card as aligned.
+
+Removed games are moved to `_rimossi/<date>/` on the card, never deleted; saves, settings, `ports` and support files are left alone; removing more than 20% of the card needs an extra confirmation. Writes are only allowed from the PC running the program (over the LAN the catalog is read-only). Cards must be mounted locally for now.
+
 ## Security
 The server listens on `127.0.0.1` only by default and has no authentication. Never expose it to the Internet. «Play» serves ROMs: keep it off outside a trusted home network.
 

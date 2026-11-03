@@ -225,6 +225,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
     <select id="sds" aria-label="SD o console" hidden></select>
     <button id="pc" class="btn" type="button">Controlla rispetto al pack</button>
     <button id="sy" class="btn primary" type="button" title="Calcola cosa aggiungere e cosa togliere per allineare la scheda al pack. Non scrive nulla.">Sincronizza con il pack</button>
+    <p class="note" style="margin:0">Allinea la scheda al pack scelto. Prima vedi cosa cambierebbe, poi decidi. <button id="gu" class="link" type="button">Come funziona</button></p>
     <div class="row">
      <button id="sa" class="btn sm" type="button" title="Registra una scheda della console collegata">Aggiungi scheda</button>
      <button id="sr" class="btn sm" type="button" title="Cambia il nome della sorgente scelta (solo quelle aggiunte da qui)">Rinomina</button>
@@ -497,7 +498,22 @@ function descrivi(v,t0){
 function barra(box,d){
  box.p.textContent=d.txt;box.b.classList.toggle('ind',d.pct===null);box.b.firstChild.style.width=d.pct===null?'':Math.min(100,d.pct)+'%'}
 function creaBarra(p){const b=document.createElement('div');b.className='prog ind';b.appendChild(document.createElement('i'));p.after(b);return {p,b}}
-const SY={aggiungi:['Da aggiungere','var(--ok)'],aggiorna:['Da aggiornare','var(--ac)'],togli:['Da togliere','var(--er)']};
+const SY={aggiungi:['Da aggiungere','var(--ok)','Sono nel pack ma non sulla scheda'],aggiorna:['Da aggiornare','var(--ac)','Ci sono già, ma il file è diverso'],togli:['Da togliere','var(--er)','Sono sulla scheda ma non nel pack: finiscono in «_rimossi», non vengono cancellati']};
+const GUIDA=[['Scegli il pack','In alto nel pannello scegli il pack che la scheda deve rispecchiare, oppure creane uno dal catalogo.'],
+['Scegli la scheda','Seleziona la SD o la console. La scheda deve essere inserita in questo PC.'],
+['Guarda cosa cambierebbe','«Sincronizza con il pack» confronta scheda e pack e mostra quanti giochi verrebbero aggiunti, aggiornati o tolti. In questa fase non viene scritto nulla.'],
+['Scegli e applica','Puoi escludere interi sistemi, oppure solo le aggiunte o solo le rimozioni. «Applica le modifiche» chiede una seconda conferma prima di scrivere.'],
+['Controlla','Durante la copia vedi avanzamento, velocità e tempo residuo. A fine lavoro rifai la sincronizzazione: deve dire che la scheda è allineata.']];
+const GARANZIE=['Niente viene cancellato: i giochi tolti vengono spostati in «_rimossi/data» sulla scheda e puoi rimetterli al loro posto.',
+'Salvataggi, impostazioni, i Ports e i file di servizio non vengono toccati.',
+'Se le rimozioni superano il 20% della scheda ti viene chiesta una conferma in più.',
+'Le modifiche si fanno solo dal PC su cui gira il programma; dalla rete si può solo consultare.'];
+$('gu').onclick=()=>{const rt=$('rt');rt.replaceChildren();const h=document.createElement('h2');h.textContent='Come sincronizzare una scheda';rt.appendChild(h);
+ const ol=document.createElement('ol');ol.style.cssText='padding-left:20px;margin:10px 0';
+ GUIDA.forEach(([t,d])=>{const li=document.createElement('li');li.style.margin='6px 0';const b=document.createElement('b');b.textContent=t+'. ';li.append(b,d);ol.appendChild(li)});rt.appendChild(ol);
+ const h3=document.createElement('h3');h3.textContent='Cosa non succede mai';rt.appendChild(h3);
+ const ul=document.createElement('ul');ul.style.cssText='padding-left:20px;margin:6px 0';GARANZIE.forEach(t=>{const li=document.createElement('li');li.style.margin='4px 0';li.textContent=t;ul.appendChild(li)});rt.appendChild(ul);
+ $('rs').hidden=false};
 $('sy').onclick=async()=>{
  const nome=$('sds').value,rt=$('rt');rt.replaceChildren();const h=document.createElement('h2');
  const p=document.createElement('p');p.style.fontSize='13px';p.className='note';rt.append(h,p);$('rs').hidden=false;
@@ -517,11 +533,11 @@ $('sy').onclick=async()=>{
  br.b.remove();
  if(r.stato!=='finito'){p.textContent='Non riuscito: '+r.errore;return}
  const n=r.n,b=r.byte,netto=b.aggiungi+b.aggiorna-b.togli;
- p.textContent=n.aggiungi+n.aggiorna+n.togli?'Anteprima: nulla è stato modificato. Variazione di spazio sulla scheda: '+(netto>=0?'+':'−')+gb(Math.abs(netto))+'.':'La scheda è già allineata al pack.';
+ p.textContent=n.aggiungi+n.aggiorna+n.togli?'Questa è solo un\'anteprima: sulla scheda non è stato modificato nulla. Variazione di spazio sulla scheda: '+(netto>=0?'+':'−')+gb(Math.abs(netto))+'.':'La scheda è già allineata al pack.';
  const tiles=document.createElement('div');tiles.className='row';tiles.style.margin='12px 0';
  for(const k in SY){const d=document.createElement('div');d.className='card';d.style.cssText='flex:1;margin:0';
   const big=document.createElement('b');big.style.cssText='font-size:22px;color:'+(n[k]?SY[k][1]:'var(--mu)');big.textContent=n[k].toLocaleString('it');
-  const sm=document.createElement('div');sm.className='note';sm.textContent=SY[k][0]+' · '+gb(b[k]);d.append(big,sm);tiles.appendChild(d)}
+  const sm=document.createElement('div');sm.className='note';sm.textContent=SY[k][0]+' · '+gb(b[k]);d.title=SY[k][2];const sp=document.createElement('div');sp.className='note';sp.style.fontSize='12px';sp.textContent=SY[k][2];d.append(big,sm,sp);tiles.appendChild(d)}
  rt.appendChild(tiles);
  const ss=Object.entries(r.per_sistema);
  if(ss.length){const tb=document.createElement('table');const th=document.createElement('tr');
