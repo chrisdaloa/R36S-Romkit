@@ -495,7 +495,7 @@ function descrivi(v,t0){
  else txt='Avvio il calcolo';
  return {txt:txt+k+' · '+t,pct};
 }
-function barra(box,d){
+function avanza(box,d){
  box.p.textContent=d.txt;box.b.classList.toggle('ind',d.pct===null);box.b.firstChild.style.width=d.pct===null?'':Math.min(100,d.pct)+'%'}
 function creaBarra(p){const b=document.createElement('div');b.className='prog ind';b.appendChild(document.createElement('i'));p.after(b);return {p,b}}
 const SY={aggiungi:['Da aggiungere','var(--ok)','Sono nel pack ma non sulla scheda'],aggiorna:['Da aggiornare','var(--ac)','Ci sono già, ma il file è diverso'],togli:['Da togliere','var(--er)','Sono sulla scheda ma non nel pack: finiscono in «_rimossi», non vengono cancellati']};
@@ -529,7 +529,7 @@ $('sy').onclick=async()=>{
   try{const x=await fetch('/api/sync?id='+id);if(!x.ok)throw new Error(x.status+' '+x.statusText);r=await x.json()}
   catch(e){p.textContent='Calcolo interrotto: '+e.message;return}
   if(r.stato!=='in corso')break;
-  barra(br,descrivi(r,t0))}
+  avanza(br,descrivi(r,t0))}
  br.b.remove();
  if(r.stato!=='finito'){p.textContent='Non riuscito: '+r.errore;return}
  const n=r.n,b=r.byte,netto=b.aggiungi+b.aggiorna-b.togli;
@@ -579,7 +579,7 @@ function applicaUI(rt,p,id,r){
    await new Promise(f=>setTimeout(f,1500));
    try{const y=await fetch('/api/sync?id='+j);v=await y.json()}catch(e){msg.textContent='Collegamento perso: '+e.message;return}
    if(v.stato!=='in corso')break;
-   barra(br,descrivi(v,t0))}
+   avanza(br,descrivi(v,t0))}
   br.b.remove();
   window._soglia=false;
   if(v.stato!=='finito'){msg.textContent='Interrotta: '+v.errore+' Rifai l\'anteprima prima di riprovare.';return}
