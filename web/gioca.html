@@ -9,12 +9,15 @@ html,body{margin:0;height:100%;background:#000;color:#ddd;font:15px system-ui,sa
 #game{width:100%;height:100%}
 #bar{position:fixed;top:0;left:0;right:0;z-index:20;padding:6px 12px;background:rgba(0,0,0,.6);font-size:13px;display:flex;gap:12px;align-items:center}
 #bar a,#bar button{color:#9cf}
-#bar button{background:none;border:1px solid #456;border-radius:6px;padding:3px 10px;font:inherit;cursor:pointer;margin-left:auto}
+#bar button{background:none;border:1px solid #456;border-radius:6px;padding:3px 10px;font:inherit;cursor:pointer}
+#bar label{margin-left:auto}
 #game:fullscreen{background:#000}
+#bar select{background:#111;color:#9cf;border:1px solid #456;border-radius:6px;padding:3px 6px;font:inherit}
+body.nitido #game canvas{image-rendering:pixelated}
 </style>
 </head>
 <body>
-<div id="bar"><a href="index.html">← Catalogo</a><span id="tit"></span><span>Comandi: frecce, Z/X = B/A, Invio = Start, Maiusc = Select</span><button id="fs" type="button" title="Tasto F">Schermo intero</button></div>
+<div id="bar"><a href="index.html">← Catalogo</a><span id="tit"></span><span>Comandi: frecce, Z/X = B/A, Invio = Start, Maiusc = Select</span><label>Grafica <select id="gr" aria-label="Grafica"><option value="nitido">Nitido</option><option value="morbido">Morbido</option><option value="crt-leggero">CRT leggero</option><option value="crt">CRT classico</option></select></label><button id="fs" type="button" title="Tasto F">Schermo intero</button></div>
 <div id="game"></div>
 <script src="i18n.js"></script>
 <script>
@@ -31,6 +34,16 @@ EJS_core=CORE[s];
 EJS_gameUrl='rom/'+encodeURIComponent(s)+'/'+encodeURIComponent(f);
 EJS_pathtodata='https://cdn.emulatorjs.org/stable/data/';
 EJS_startOnLoaded=true;
+// preset grafici: scelta ricordata per sistema, cambio al volo senza ricaricare
+const GRAFICA={nitido:'disabled',morbido:'disabled','crt-leggero':'crt-zfast',crt:'crt-easymode.glslp'};
+let preset='nitido';try{preset=localStorage.getItem('grafica-'+s)||'nitido'}catch(e){}
+if(!GRAFICA[preset])preset='nitido';
+const gr=document.getElementById('gr');gr.value=preset;
+const applica=p=>{document.body.classList.toggle('nitido',p==='nitido');
+ if(window.EJS_emulator){try{EJS_emulator.changeSettingOption('shader',GRAFICA[p])}catch(e){}}};
+applica(preset);
+EJS_defaultOptions={shader:GRAFICA[preset]};
+gr.onchange=()=>{try{localStorage.setItem('grafica-'+s,gr.value)}catch(e){}applica(gr.value);gr.blur()};
 </script>
 <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
 </body>
