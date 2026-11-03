@@ -27,6 +27,7 @@ def _lancia_piano(cfg, nome, dove, pack):
             p = sync.piano(cfg, dove, pack)
             elenco = {k: p[k][:3000] for k in ('aggiungi', 'aggiorna', 'togli')}
             n = {k: len(p[k]) for k in ('aggiungi', 'aggiorna', 'togli')}
+            LAVORI[j]['piano'] = p
             r = {'stato': 'finito', 'byte': p['byte'], 'n': n, 'per_sistema': p['per_sistema'],
                  'elenco': elenco, 'anomalie': p['anomalie'][:50]}
         except (OSError, KeyError, SystemExit) as e:
@@ -94,6 +95,7 @@ def crea(cfg):
             if not v:
                 return self.send_error(404)
             v.pop('chiave', None)
+            v.pop('piano', None)
             self._json(json.dumps(v, ensure_ascii=False).encode())
 
         def _sync_avvia(self):
@@ -113,6 +115,48 @@ def crea(cfg):
             except (ValueError, KeyError, TypeError, OSError):
                 return self.send_error(400)
             self._json(json.dumps({'id': _lancia_piano(cfg, nome, dove, pack)}).encode())
+
+        def _sync_applica(self):
+            if not self._origine_ok():
+                return self.send_error(403)
+            n = int(self.headers.get('Content-Length') or 0)
+            if not 0 < n <= 65536:
+                return self.send_error(413)
+            try:
+                d = json.loads(self.rfile.read(n))
+                with LAVORI_LOCK:
+                    v = LAVORI.get(d['id'])
+                    piano = v and v.get('piano')
+                    if not piano or v['stato'] != 'finito':
+                        return self.send_error(404, 'Piano non disponibile: rifai l\'anteprima')
+                    nome, pack = v['chiave']
+                    if any(x['stato'] == 'in corso' and x['chiave'][0] == nome for x in LAVORI.values()):
+                        return self.send_error(409, 'Un\'altra operazione su questa scheda e\' in corso')
+                sistemi = set(d['sistemi']) if d.get('sistemi') is not None else None
+                agg, tog = bool(d.get('aggiungi', True)), bool(d.get('togli', True))
+                dove = sorgenti.risolte(cfg).get(nome)
+                if dove is None:
+                    return self.send_error(503, 'Scheda non collegata')
+                if tog and sync.richiede_conferma(piano, sistemi) and not d.get('conferma_soglia'):
+                    return self.send_error(409, 'Le rimozioni superano il 20% della scheda: serve la conferma esplicita')
+            except (ValueError, KeyError, TypeError):
+                return self.send_error(400)
+            j = uuid.uuid4().hex[:12]
+            with LAVORI_LOCK:
+                v.pop('piano', None)          # il piano vale una volta sola: dopo si rifà l'anteprima
+                LAVORI[j] = {'chiave': (nome, pack), 'stato': 'in corso', 'tipo': 'applica', 'fase': 'avvio', 'inizio': time.time()}
+
+            def corri():
+                try:
+                    r = sync.applica(cfg, dove, piano, agg, tog, sistemi, LAVORI[j])
+                    r['stato'] = 'finito'
+                except (OSError, SystemExit) as e:
+                    r = {'stato': 'errore', 'errore': str(e)[:300] or 'Sincronizzazione non riuscita'}
+                with LAVORI_LOCK:
+                    LAVORI[j].update(r)
+                    LAVORI[j].pop('piano', None)
+            threading.Thread(target=corri, daemon=True).start()
+            self._json(json.dumps({'id': j}).encode())
 
         def do_GET(self):
             ru = urlsplit(self.path)
@@ -192,6 +236,8 @@ def crea(cfg):
         def do_POST(self):
             if urlsplit(self.path).path == '/api/sync':
                 return self._sync_avvia()
+            if urlsplit(self.path).path == '/api/sync/applica':
+                return self._sync_applica()
             self._sorgente('aggiungi')
 
         def do_DELETE(self):

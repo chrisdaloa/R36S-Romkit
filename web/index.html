@@ -499,13 +499,48 @@ $('sy').onclick=async()=>{
  if(ss.length){const tb=document.createElement('table');const th=document.createElement('tr');
   ['Sistema','Aggiungi','Aggiorna','Togli'].forEach(t=>{const c=document.createElement('th');c.textContent=t;th.appendChild(c)});tb.appendChild(th);
   ss.sort((a,c)=>(c[1].aggiungi[1]+c[1].aggiorna[1]+c[1].togli[1])-(a[1].aggiungi[1]+a[1].aggiorna[1]+a[1].togli[1])).forEach(([sis,x])=>{
-   const tr=document.createElement('tr');[sis,...['aggiungi','aggiorna','togli'].map(k=>x[k][0]?x[k][0].toLocaleString('it')+' · '+gb(x[k][1]):'—')].forEach(v=>{const c=document.createElement('td');c.textContent=v;tr.appendChild(c)});tb.appendChild(tr)});
+   const tr=document.createElement('tr');[sis,...['aggiungi','aggiorna','togli'].map(k=>x[k][0]?x[k][0].toLocaleString('it')+' · '+gb(x[k][1]):'—')].forEach((v,i)=>{const c=document.createElement('td');
+    if(!i){const cb=document.createElement('input');cb.type='checkbox';cb.checked=true;cb.dataset.s=sis;cb.className='sysel';cb.setAttribute('aria-label','Includi '+sis);cb.style.marginRight='8px';c.appendChild(cb)}
+    c.append(v);tr.appendChild(c)});tb.appendChild(tr)});
   rt.appendChild(tb)}
  for(const k in SY){if(!n[k])continue;const d=document.createElement('details');const sm=document.createElement('summary');
   sm.textContent=SY[k][0]+' ('+n[k].toLocaleString('it')+')'+(n[k]>r.elenco[k].length?' — primi '+r.elenco[k].length.toLocaleString('it'):'');d.appendChild(sm);
   const pre=document.createElement('pre');pre.style.cssText='font-size:12px;max-height:240px;overflow:auto;white-space:pre-wrap';
   pre.textContent=r.elenco[k].map(x=>x[0]).join('\n');d.appendChild(pre);rt.appendChild(d)}
+ if(n.aggiungi+n.aggiorna+n.togli)applicaUI(rt,p,id,r)
 };
+function applicaUI(rt,p,id,r){
+ const n=r.n,box=document.createElement('div');box.className='stack';box.style.marginTop='14px';
+ const opz=(testo,k,on)=>{const l=document.createElement('label');l.className='chk';const c=document.createElement('input');c.type='checkbox';c.checked=on;l.append(c,' '+testo);return [l,c]};
+ const [l1,c1]=opz('Aggiungi e aggiorna ('+(n.aggiungi+n.aggiorna).toLocaleString('it')+' file)','a',n.aggiungi+n.aggiorna>0);
+ const [l2,c2]=opz('Togli ('+n.togli.toLocaleString('it')+' file): vengono spostati in «_rimossi» sulla scheda, non cancellati','t',n.togli>0);
+ c1.disabled=!(n.aggiungi+n.aggiorna);c2.disabled=!n.togli;
+ const bt=document.createElement('button');bt.type='button';bt.className='btn primary';bt.textContent='Applica le modifiche';
+ const msg=document.createElement('p');msg.className='note';
+ let armato=false;
+ const sistemi=()=>[...rt.querySelectorAll('.sysel')].filter(x=>x.checked).map(x=>x.dataset.s);
+ const riarma=()=>{armato=false;bt.textContent='Applica le modifiche';bt.classList.remove('danger')};
+ [c1,c2,...rt.querySelectorAll('.sysel')].forEach(x=>x.addEventListener('change',riarma));
+ bt.onclick=async()=>{
+  const nt=c2.checked&&!c2.disabled;
+  if(!armato){armato=true;bt.textContent='Conferma: '+(c1.checked&&!c1.disabled?'copio i file scelti':'')+(c1.checked&&nt?' e ':'')+(nt?'sposto i file in _rimossi':'');return}
+  bt.disabled=true;msg.textContent='Avvio…';
+  const corpo={id,aggiungi:c1.checked&&!c1.disabled,togli:nt,sistemi:sistemi(),conferma_soglia:r.n.togli>0&&nt&&window._soglia===true};
+  let x=await fetch('/api/sync/applica',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});
+  if(x.status===409&&(await x.text()).includes('20%')){
+   msg.textContent='Le rimozioni superano il 20% della scheda. Premi ancora per confermare.';window._soglia=true;bt.disabled=false;bt.textContent='Confermo: tolgo più del 20%';bt.classList.add('danger');armato=true;return}
+  if(!x.ok){msg.textContent='Non avviata: '+(x.statusText||x.status);bt.disabled=false;riarma();return}
+  const j=(await x.json()).id;let v;
+  while(true){
+   await new Promise(f=>setTimeout(f,1500));
+   try{const y=await fetch('/api/sync?id='+j);v=await y.json()}catch(e){msg.textContent='Collegamento perso: '+e.message;return}
+   if(v.stato!=='in corso')break;
+   msg.textContent=({togli:'Sposto i file da togliere',copia:'Copio i file',gamelist:'Aggiorno i gamelist',avvio:'Avvio'})[v.fase]+(v.totale?' ('+v.fatti.toLocaleString('it')+' di '+v.totale.toLocaleString('it')+')':'')+'…'}
+  window._soglia=false;
+  if(v.stato!=='finito'){msg.textContent='Interrotta: '+v.errore+' Rifai l\'anteprima prima di riprovare.';return}
+  bt.remove();l1.remove();l2.remove();
+  msg.textContent='Fatto: '+v.aggiunti.toLocaleString('it')+' file copiati, '+v.tolti.toLocaleString('it')+' spostati'+(v.cestino?' in «'+v.cestino+'» sulla scheda':'')+'. Rifai la sincronizzazione per verificare che la scheda sia allineata.'}
+ box.append(l1,l2,bt,msg);rt.appendChild(box)}
 
 caricaPack();
 </script>

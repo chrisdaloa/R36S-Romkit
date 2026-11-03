@@ -1,7 +1,8 @@
 """Piano di sincronizzazione di una SD con un pack: cosa aggiungere, aggiornare, togliere. Solo lettura."""
-import os, fnmatch, subprocess
+import os, fnmatch, subprocess, shutil, time
 from . import packs
 
+SUPPORTO = ('.txt', '.cfg', '.ini', '.sh', '.db', '.xml', '.json')   # file di configurazione degli emulatori: mai da togliere
 SALVATAGGI = ('.srm', '.sav', '.state', '.auto', '.rtc', '.mcr', '.mcd', '.eep', '.fla', '.sra', '.nv')
 
 
@@ -61,7 +62,7 @@ def piano(cfg, dove, pack, cartella='_anteprima'):
             upd.append((p, n))
     for p, n in sorted(sd.items()):
         b = os.path.basename(p).lower()
-        if p.split('/', 1)[0] not in sistemi or p in voluto or b.startswith('gamelist.xml') or b.endswith(SALVATAGGI) or '.state' in b:
+        if p.split('/', 1)[0] not in sistemi or p in voluto or b.startswith('gamelist.xml') or b.endswith(SALVATAGGI + SUPPORTO) or '.state' in b:
             continue
         if os.path.isfile(os.path.join(arch, p)):
             tog.append((p, n))
@@ -76,4 +77,69 @@ def piano(cfg, dove, pack, cartella='_anteprima'):
     return {'pack': pack, 'cartella': r['dest'], 'anomalie': r['anomalie'],
             'aggiungi': agg, 'aggiorna': upd, 'togli': tog,
             'byte': {'aggiungi': somma(agg), 'aggiorna': somma(upd), 'togli': somma(tog)},
-            'per_sistema': per, 'file_sd': len(sd_tutti)}
+            'per_sistema': per, 'file_sd': len(sd_tutti), 'byte_sd': sum(sd_tutti.values())}
+
+
+SOGLIA_TOGLI = 0.20          # oltre questa quota della scheda serve una seconda conferma
+
+
+def _sicuro(p):
+    return p and not os.path.isabs(p) and '..' not in p.split('/')
+
+
+def richiede_conferma(piano, sistemi=None):
+    """True se le rimozioni superano la soglia (per numero di file o per dimensione)."""
+    t = [(p, n) for p, n in piano['togli'] if sistemi is None or p.split('/', 1)[0] in sistemi]
+    return bool(piano['file_sd']) and (len(t) > SOGLIA_TOGLI * piano['file_sd'] or sum(n for _, n in t) > SOGLIA_TOGLI * max(1, piano['byte_sd']))
+
+
+def applica(cfg, dove, piano, aggiungi=True, togli=True, sistemi=None, stato=None):
+    """Esegue il piano su una SD montata. Le rimozioni vanno in _rimossi/<data>/, mai cancellate.
+
+    `sistemi` limita l'operazione a quei sistemi; `stato` e' un dict aggiornato con la fase corrente."""
+    if _remoto(dove) or not os.path.isdir(dove):
+        raise SystemExit('La sincronizzazione scrive solo su schede montate su questo PC')
+    stato = stato if stato is not None else {}
+    scelti = lambda l: [(p, n) for p, n in l if _sicuro(p) and (sistemi is None or p.split('/', 1)[0] in sistemi)]
+    agg = scelti(piano['aggiungi'] + piano['aggiorna']) if aggiungi else []
+    tog = scelti(piano['togli']) if togli else []
+    if agg:
+        libero = shutil.disk_usage(dove).free + sum(n for _, n in tog)
+        servono = sum(n for _, n in agg)
+        if servono * 1.02 > libero:
+            raise SystemExit(f'Spazio insufficiente: servono {servono / 1e9:.1f} GB, disponibili {libero / 1e9:.1f} GB')
+    data = time.strftime('%Y-%m-%d_%H%M%S')
+    log = [f'Sincronizzazione {data} - {piano["pack"]} -> {dove}']
+    stato.update(fase='togli', fatti=0, totale=len(tog))
+    for i, (p, n) in enumerate(tog):
+        src = os.path.join(dove, p)
+        dst = os.path.join(dove, '_rimossi', data, p)
+        if os.path.isfile(src):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            os.replace(src, dst)
+            log.append(f'- {p}')
+        stato['fatti'] = i + 1
+    stato.update(fase='copia', fatti=0, totale=len(agg))
+    if agg:
+        lista = os.path.join(piano['cartella'], 'lista-sync.txt')
+        with open(lista, 'w') as fh:
+            fh.write('\n'.join(p for p, _ in agg) + '\n')
+        ex = [f'--exclude={e}' for e in cfg['pack']['escludi']]
+        r = subprocess.run(['rsync', '-rt', '--no-perms', '--no-owner', '--no-group', *ex, f'--files-from={lista}',
+                            cfg.archivio + '/', dove + '/'], capture_output=True, text=True)
+        if r.returncode:
+            raise SystemExit('Copia interrotta: ' + (r.stderr.strip()[-300:] or f'rsync {r.returncode}'))
+        log += [f'+ {p}' for p, _ in agg]
+    stato['fase'] = 'gamelist'
+    gl = os.path.join(piano['cartella'], 'gamelist')
+    if os.path.isdir(gl) and (agg or tog):
+        r = subprocess.run(['rsync', '-rt', '--no-perms', '--no-owner', '--no-group', gl + '/', dove + '/'], capture_output=True, text=True)
+        if r.returncode:
+            raise SystemExit('Gamelist non aggiornati: ' + r.stderr.strip()[-300:])
+    registro = os.path.join(piano['cartella'], f'sync-{data}.log')
+    try:
+        with open(registro, 'w') as fh:
+            fh.write('\n'.join(log) + '\n')
+    except OSError:
+        registro = None
+    return {'aggiunti': len(agg), 'tolti': len(tog), 'cestino': f'_rimossi/{data}' if tog else None, 'registro': registro}
