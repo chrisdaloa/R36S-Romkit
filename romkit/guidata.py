@@ -155,6 +155,18 @@ def salva(file, d):
     return {'config': file, 'schede': nomi}
 
 
+def demo(file):
+    """Crea l'archivio finto accanto a config.toml, scrive la configurazione e avvia il primo catalogo."""
+    from . import demo as d
+    cart = os.path.join(os.path.dirname(os.path.abspath(file)), 'demo-lavoro')
+    d.crea(cart, avviso=False)
+    dati = {'archivio': os.path.join(cart, 'EASYROMS'), 'dati': os.path.join(cart, 'dati'),
+            'pack': os.path.join(cart, 'packs'), 'porta': 8765}
+    r = salva(file, dati)
+    costruisci(file)
+    return {**dati, 'config': r['config']}
+
+
 # ---- primo catalogo -----------------------------------------------------------------------------
 def costruisci(file):
     with _LOCK:

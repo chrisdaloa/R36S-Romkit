@@ -11,7 +11,7 @@ GIOCHI = {
 EST = {'nes': 'zip', 'snes': 'zip', 'gba': 'zip', 'megadrive': 'zip'}
 
 
-def crea(cartella):
+def crea(cartella, avviso=True):
     from PIL import Image, ImageDraw
     arch = os.path.join(cartella, 'EASYROMS')
     for s, titoli in GIOCHI.items():
@@ -36,4 +36,6 @@ def crea(cartella):
     open(cfgf, 'w').write(f'[archivio]\npercorso = "./EASYROMS"\n[uscite]\ndati = "./dati"\npack = "./packs"\n'
                            f'[sd]\ndestinazione = "./SD-finta"\n')
     os.makedirs(os.path.join(cartella, 'SD-finta'), exist_ok=True)
-    print(f'Demo creata in {cartella}. Prova:\n  romkit --config {cfgf} catalogo\n  romkit --config {cfgf} serve')
+    if avviso:
+        print(f'Demo creata in {cartella}. Prova:\n  romkit --config {cfgf} catalogo\n  romkit --config {cfgf} serve')
+    return cartella

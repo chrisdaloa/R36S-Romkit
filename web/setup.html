@@ -134,7 +134,16 @@ function vaiAvanti(){passo++;disegna()}
 /* 1 archivio */
 function p0(c){
  c.innerHTML=`<h1>${T('Dove sono i tuoi giochi?')}</h1><p class="sotto">${T('Scegli la cartella dell\'archivio: quella che contiene una sottocartella per ogni sistema (nes, snes, psx…).')}</p>`+
-  campo('arc',T('Cartella dell\'archivio'),S.archivio)+`<div id="esito"></div>`+nav(false,okArchivio);
+  campo('arc',T('Cartella dell\'archivio'),S.archivio)+`<div id="esito"></div>`+nav(false,okArchivio)+
+  `<p class="nota" style="margin-top:22px">${T('Non hai ancora un archivio? Puoi provare il programma con giochi finti.')} <button class="btn" id="demo" type="button">${T('Provo con una demo')}</button></p>`;
+ $('demo').onclick=async()=>{
+  $('demo').disabled=true;$('avanti').disabled=true;
+  $('esito').innerHTML='<div class="esito"><span class="piccolo"></span> '+T('Creo l\'archivio di prova…')+'</div>';
+  try{Object.assign(S,await api('/api/setup/demo',{}));S.schede=[];S.rete=false;S.gioca=false}
+  catch(e){$('esito').innerHTML='<div class="esito no">'+esc(e.message)+'</div>';$('demo').disabled=false;return}
+  document.querySelectorAll('#card > *').forEach(x=>{if(x.id!=='esito')x.hidden=true});
+  sorveglia();
+ };
  const inp=$('arc');let t;
  const ctrl=async()=>{
   S.archivio=inp.value.trim();okArchivio=false;$('avanti').disabled=true;

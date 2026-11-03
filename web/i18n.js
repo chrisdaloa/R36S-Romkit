@@ -101,6 +101,7 @@
   'Un\'altra operazione su questa scheda e\' in corso':'Another operation on this card is in progress',
   // procedura guidata
   'Configurazione guidata':'Guided setup','configurazione guidata':'guided setup','impostazioni':'settings',
+  'Non hai ancora un archivio? Puoi provare il programma con giochi finti.':'No collection yet? You can try the program with fake games.','Provo con una demo':'Try a demo','Creo l\'archivio di prova…':'Creating the sample collection…',
   'Dove sono i tuoi giochi?':'Where are your games?','Scegli la cartella dell\'archivio: quella che contiene una sottocartella per ogni sistema (nes, snes, psx…).':'Choose the collection folder: the one holding a subfolder for each system (nes, snes, psx…).',
   'Cartella dell\'archivio':'Collection folder','Sfoglia':'Browse','Controllo la cartella…':'Checking the folder…',
   'Trovati {s} sistemi e {g} file di gioco; {c} sistemi hanno già descrizioni e immagini (gamelist.xml).':'Found {s} systems and {g} game files; {c} systems already have descriptions and images (gamelist.xml).',

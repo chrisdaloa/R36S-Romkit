@@ -15,9 +15,7 @@ It works on **your own** ROM collection (one folder per system, with `gamelist.x
 ## Quick start (no ROMs, fake collection)
 ```
 pip install -e .
-romkit demo demo-work
-romkit --config demo-work/config.toml catalogo
-romkit --config demo-work/config.toml serve      # http://127.0.0.1:8765/index.html
+romkit serve      # open http://127.0.0.1:8765/ and choose "Try a demo"
 ```
 
 ## With your collection

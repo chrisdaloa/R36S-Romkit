@@ -69,6 +69,8 @@ def _setup_api(h, metodo, file):
         elif metodo == 'POST' and azione == 'salva':
             r = guidata.salva(file, corpo)
             guidata.costruisci(file)
+        elif metodo == 'POST' and azione == 'demo':
+            r = guidata.demo(file)
         elif metodo == 'POST' and azione == 'fine':
             r = {'ok': True}
             guidata.riavvia(['-m', 'romkit.cli', '--config', file, 'serve'])

@@ -18,9 +18,7 @@ Non include ROM, né le scarica.
 ## Avvio rapido (senza ROM, con archivio di prova)
 ```
 pip install -e .
-romkit demo prova
-romkit --config prova/config.toml catalogo
-romkit --config prova/config.toml serve      # http://127.0.0.1:8765/index.html
+romkit serve      # apri http://127.0.0.1:8765/ e scegli «Provo con una demo»
 ```
 
 ## Con il tuo archivio
