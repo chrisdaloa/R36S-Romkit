@@ -77,6 +77,8 @@ def crea(cfg):
 
         def do_PUT(self):
             # i pack si salvano solo dalla pagina stessa (stessa origine)
+            if self.path.split('?', 1)[0] == '/api/sorgenti':
+                return self._sorgente('rinomina')
             if self.path.split('?', 1)[0] != '/api/packs':
                 return self.send_error(405)
             orig = self.headers.get('Origin')
@@ -104,7 +106,7 @@ def crea(cfg):
             orig = self.headers.get('Origin')
             return bool(locale) and not (orig and orig.split('://', 1)[-1] != self.headers.get('Host'))
 
-        def _sorgente(self, agg):
+        def _sorgente(self, azione):
             # il browser indica un nome e l'UUID di una scheda rilevata, mai un percorso
             if urlsplit(self.path).path != '/api/sorgenti':
                 return self.send_error(405)
@@ -115,8 +117,10 @@ def crea(cfg):
                 return self.send_error(413)
             try:
                 d = json.loads(self.rfile.read(n))
-                if agg:
+                if azione == 'aggiungi':
                     sorgenti.aggiungi(cfg, d['nome'], d['uuid'])
+                elif azione == 'rinomina':
+                    sorgenti.rinomina(cfg, d['nome'], d['nuovo'])
                 else:
                     sorgenti.rimuovi(cfg, d['nome'])
             except (ValueError, KeyError, TypeError) as e:
@@ -125,10 +129,10 @@ def crea(cfg):
             self.end_headers()
 
         def do_POST(self):
-            self._sorgente(True)
+            self._sorgente('aggiungi')
 
         def do_DELETE(self):
-            self._sorgente(False)
+            self._sorgente('rimuovi')
 
     return H
 

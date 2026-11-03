@@ -95,7 +95,7 @@ button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(
 <label>Riserva <input id="pris" type="number" min="0" step="1"> GB</label>
 <div id="bar"><i></i></div><span id="bt"></span>
 <button id="pa">Aggiungi i risultati</button><button id="pr">Togli i risultati</button>
-<button id="ps">Riepilogo</button><select id="sds" aria-label="SD o console" hidden></select><button id="pc" hidden>Controlla SD</button><button id="sa" hidden title="Registra una scheda della console collegata">+ SD</button><button id="sx" hidden title="Rimuovi la sorgente scelta (solo quelle aggiunte da qui)">− SD</button><span id="sf" hidden><select id="vol" aria-label="Volume rilevato"></select> <input id="nm" placeholder="Nome (es. SD 64 GB)" maxlength="40"> <button id="ss">Salva</button></span><button id="pe">Esporta elenco</button><button id="pd">Elimina pack</button>
+<button id="ps">Riepilogo</button><select id="sds" aria-label="SD o console" hidden></select><button id="pc" hidden>Controlla SD</button><button id="sa" hidden title="Registra una scheda della console collegata">+ SD</button><button id="sr" hidden title="Cambia il nome della sorgente scelta (solo quelle aggiunte da qui)">Rinomina</button><button id="sx" hidden title="Rimuovi la sorgente scelta (solo quelle aggiunte da qui)">− SD</button><span id="sf" hidden><select id="vol" aria-label="Volume rilevato"></select> <input id="nm" placeholder="Nome (es. SD 64 GB)" maxlength="40"> <button id="ss">Salva</button></span><button id="pe">Esporta elenco</button><button id="pd">Elimina pack</button>
 </div>
 </header>
 <main id="g"></main>
@@ -244,10 +244,15 @@ async function sorgenti(sel){
   const prec=sel||$('sds').value;
   $('sds').replaceChildren();n.forEach(x=>{const o=document.createElement('option');o.value=x.nome;o.textContent=x.nome+(STATO[x.stato]||'');$('sds').appendChild(o)});
   if(prec&&n.some(x=>x.nome===prec))$('sds').value=prec;
-  $('sds').hidden=$('pc').hidden=!n.length;$('sa').hidden=!v.modificabile;$('sx').hidden=!v.modificabile||!(($('sds').value) in salvate)}catch(e){}
+  $('sds').hidden=$('pc').hidden=!n.length;$('sa').hidden=!v.modificabile;$('sx').hidden=$('sr').hidden=!v.modificabile||!(($('sds').value) in salvate)}catch(e){}
 }
 if(location.protocol.startsWith('http')){sorgenti();window.addEventListener('focus',()=>sorgenti())}
-$('sds').onchange=()=>{$('sx').hidden=!($('sds').value in salvate)};
+$('sds').onchange=()=>{$('sx').hidden=$('sr').hidden=!($('sds').value in salvate)};
+$('sr').onclick=async()=>{
+ const nome=$('sds').value;const nuovo=(prompt('Nuovo nome per «'+nome+'»',nome)||'').trim();if(!nuovo||nuovo===nome)return;
+ const r=await fetch('/api/sorgenti',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,nuovo})});
+ if(!r.ok){alert('Non rinominata: '+(r.statusText||r.status));return}
+ sorgenti(nuovo)};
 $('sa').onclick=async()=>{
  const v=await (await fetch('/api/volumi')).json();
  const noti=new Set(Object.values(v.salvate).map(x=>x.uuid));

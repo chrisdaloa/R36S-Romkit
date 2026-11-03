@@ -123,3 +123,16 @@ def rimuovi(cfg, nome):
         raise ValueError('Sorgente non rimovibile da qui')
     del d[nome]
     _scrivi(cfg, d)
+
+
+def rinomina(cfg, vecchio, nuovo):
+    """Cambia solo il nome mostrato: l'identita' (UUID) della scheda resta la stessa."""
+    d = salvate(cfg)
+    if vecchio not in d:
+        raise ValueError('Sorgente non modificabile da qui')
+    if not NOME.match(nuovo or ''):
+        raise ValueError('Nome non valido (lettere, numeri, spazi, max 40)')
+    if nuovo != vecchio and (nuovo in d or nuovo in cfg['sd']['sorgenti']):
+        raise ValueError('Nome gia\' in uso')
+    d = {(nuovo if k == vecchio else k): v for k, v in d.items()}      # mantiene l'ordine
+    _scrivi(cfg, d)

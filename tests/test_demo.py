@@ -67,7 +67,12 @@ class Fumo(unittest.TestCase):
             self.assertIn({'nome': 'SD prova', 'stato': 'collegata'}, sorgenti.elenco(cfg))
             with self.assertRaises(ValueError):
                 sorgenti.aggiungi(cfg, 'Altra', 'BBBB-0002')    # gia' registrata
-            sorgenti.rimuovi(cfg, 'SD prova')
+            sorgenti.rinomina(cfg, 'SD prova', 'SD 64 GB')
+            self.assertEqual(sorgenti.salvate(cfg)['SD 64 GB']['uuid'], 'BBBB-0002')
+            self.assertNotIn('SD prova', sorgenti.salvate(cfg))
+            with self.assertRaises(ValueError):
+                sorgenti.rinomina(cfg, 'SD 64 GB', '../x')
+            sorgenti.rimuovi(cfg, 'SD 64 GB')
             self.assertNotIn('SD prova', sorgenti.salvate(cfg))
 
 
