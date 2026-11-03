@@ -219,7 +219,8 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
    <h3>Scheda SD o console</h3>
    <div class="stack">
     <select id="sds" aria-label="SD o console" hidden></select>
-    <button id="pc" class="btn primary" type="button">Controlla rispetto al pack</button>
+    <button id="pc" class="btn" type="button">Controlla rispetto al pack</button>
+    <button id="sy" class="btn primary" type="button" title="Calcola cosa aggiungere e cosa togliere per allineare la scheda al pack. Non scrive nulla.">Sincronizza con il pack</button>
     <div class="row">
      <button id="sa" class="btn sm" type="button" title="Registra una scheda della console collegata">Aggiungi scheda</button>
      <button id="sr" class="btn sm" type="button" title="Cambia il nome della sorgente scelta (solo quelle aggiunte da qui)">Rinomina</button>
@@ -350,7 +351,7 @@ function elenco(){
  k.value=pack}
 function barra(){
  document.body.classList.toggle('pk',!!pack);
- $('pkd').hidden=$('pfs').hidden=$('pd').hidden=!pack;$('pc').disabled=!pack;
+ $('pkd').hidden=$('pfs').hidden=$('pd').hidden=!pack;$('pc').disabled=$('sy').disabled=!pack;
  $('pc').title=pack?'':'Scegli prima un pack';
  $('pkn').textContent=pack||'Pack';
  if(!pack){$('pkm').firstChild.style.width='0';return}
@@ -419,7 +420,7 @@ async function sorgenti(sel){
   $('sds').replaceChildren();n.forEach(x=>{const o=document.createElement('option');o.value=x.nome;o.textContent=x.nome+(STATO[x.stato]||'');$('sds').appendChild(o)});
   if(prec&&n.some(x=>x.nome===prec))$('sds').value=prec;
   $('sdsec').hidden=false;
-  $('sds').hidden=$('pc').hidden=!n.length;$('sa').hidden=!v.modificabile;$('sx').hidden=$('sr').hidden=!v.modificabile||!(($('sds').value) in salvate)}catch(e){}
+  $('sds').hidden=$('pc').hidden=!n.length;$('sy').hidden=!n.length||!v.modificabile;$('sa').hidden=!v.modificabile;$('sx').hidden=$('sr').hidden=!v.modificabile||!(($('sds').value) in salvate)}catch(e){}
 }
 if(location.protocol.startsWith('http')){sorgenti();window.addEventListener('focus',()=>sorgenti())}
 $('sds').onchange=()=>{$('sx').hidden=$('sr').hidden=!($('sds').value in salvate)};
@@ -466,6 +467,44 @@ $('pc').onclick=async()=>{
  if(r.dettagli.length){const d=document.createElement('details');const sm=document.createElement('summary');sm.textContent='Dettaglio (primi '+Math.min(r.dettagli.length,2000)+')';d.appendChild(sm);
   const pre=document.createElement('pre');pre.style.cssText='font-size:12px;max-height:240px;overflow:auto;white-space:pre-wrap';
   pre.textContent=r.dettagli.map(x=>x[0]+' '+x[1]+'/'+x[2]).join('\n');d.appendChild(pre);rt.appendChild(d)}
+};
+
+// sincronizzazione: il server calcola il piano in background (puo' richiedere alcuni minuti), la pagina lo interroga
+const SY={aggiungi:['Da aggiungere','var(--ok)'],aggiorna:['Da aggiornare','var(--ac)'],togli:['Da togliere','var(--er)']};
+$('sy').onclick=async()=>{
+ const nome=$('sds').value,rt=$('rt');rt.replaceChildren();const h=document.createElement('h2');
+ const p=document.createElement('p');p.style.fontSize='13px';p.className='note';rt.append(h,p);$('rs').hidden=false;
+ h.textContent='Sincronizzazione di «'+nome+'» con «'+pack+'»';p.textContent='Calcolo in corso: confronto la scheda con il pack, può richiedere alcuni minuti.';
+ let id,t0=Date.now();
+ try{const x=await fetch('/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sorgente:nome,pack})});
+  if(!x.ok)throw new Error(x.status+' '+x.statusText);id=(await x.json()).id}
+ catch(e){p.textContent='Non avviata: '+e.message;return}
+ let r;
+ while(true){
+  await new Promise(f=>setTimeout(f,3000));
+  if($('rs').hidden)return;
+  try{const x=await fetch('/api/sync?id='+id);if(!x.ok)throw new Error(x.status+' '+x.statusText);r=await x.json()}
+  catch(e){p.textContent='Calcolo interrotto: '+e.message;return}
+  if(r.stato!=='in corso')break;
+  p.textContent='Calcolo in corso da '+Math.round((Date.now()-t0)/1000)+' s…'}
+ if(r.stato!=='finito'){p.textContent='Non riuscito: '+r.errore;return}
+ const n=r.n,b=r.byte,netto=b.aggiungi+b.aggiorna-b.togli;
+ p.textContent=n.aggiungi+n.aggiorna+n.togli?'Anteprima: nulla è stato modificato. Variazione di spazio sulla scheda: '+(netto>=0?'+':'−')+gb(Math.abs(netto))+'.':'La scheda è già allineata al pack.';
+ const tiles=document.createElement('div');tiles.className='row';tiles.style.margin='12px 0';
+ for(const k in SY){const d=document.createElement('div');d.className='card';d.style.cssText='flex:1;margin:0';
+  const big=document.createElement('b');big.style.cssText='font-size:22px;color:'+(n[k]?SY[k][1]:'var(--mu)');big.textContent=n[k].toLocaleString('it');
+  const sm=document.createElement('div');sm.className='note';sm.textContent=SY[k][0]+' · '+gb(b[k]);d.append(big,sm);tiles.appendChild(d)}
+ rt.appendChild(tiles);
+ const ss=Object.entries(r.per_sistema);
+ if(ss.length){const tb=document.createElement('table');const th=document.createElement('tr');
+  ['Sistema','Aggiungi','Aggiorna','Togli'].forEach(t=>{const c=document.createElement('th');c.textContent=t;th.appendChild(c)});tb.appendChild(th);
+  ss.sort((a,c)=>(c[1].aggiungi[1]+c[1].aggiorna[1]+c[1].togli[1])-(a[1].aggiungi[1]+a[1].aggiorna[1]+a[1].togli[1])).forEach(([sis,x])=>{
+   const tr=document.createElement('tr');[sis,...['aggiungi','aggiorna','togli'].map(k=>x[k][0]?x[k][0].toLocaleString('it')+' · '+gb(x[k][1]):'—')].forEach(v=>{const c=document.createElement('td');c.textContent=v;tr.appendChild(c)});tb.appendChild(tr)});
+  rt.appendChild(tb)}
+ for(const k in SY){if(!n[k])continue;const d=document.createElement('details');const sm=document.createElement('summary');
+  sm.textContent=SY[k][0]+' ('+n[k].toLocaleString('it')+')'+(n[k]>r.elenco[k].length?' — primi '+r.elenco[k].length.toLocaleString('it'):'');d.appendChild(sm);
+  const pre=document.createElement('pre');pre.style.cssText='font-size:12px;max-height:240px;overflow:auto;white-space:pre-wrap';
+  pre.textContent=r.elenco[k].map(x=>x[0]).join('\n');d.appendChild(pre);rt.appendChild(d)}
 };
 
 caricaPack();

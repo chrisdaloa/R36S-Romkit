@@ -1,12 +1,40 @@
 """Server locale del catalogo: pagina web, dati generati, pack e (solo se abilitato) ROM in sola lettura."""
-import os, json, posixpath, tempfile
+import os, json, posixpath, tempfile, threading, time, uuid
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit, parse_qs
-from . import sd, sorgenti
+from . import sd, sorgenti, sync, packs
 
 WEB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'web')
 MAX_PACKS = 20 * 1024 * 1024
 DATI = ('data.js', 'data.json')
+
+
+LAVORI = {}                    # id -> stato dei calcoli di sincronizzazione in corso o finiti
+LAVORI_LOCK = threading.Lock()
+
+
+def _lancia_piano(cfg, nome, dove, pack):
+    chiave = (nome, pack)
+    with LAVORI_LOCK:
+        for j, v in LAVORI.items():
+            if v['chiave'] == chiave and v['stato'] == 'in corso':
+                return j
+        j = uuid.uuid4().hex[:12]
+        LAVORI[j] = {'chiave': chiave, 'stato': 'in corso', 'inizio': time.time()}
+
+    def corri():
+        try:
+            p = sync.piano(cfg, dove, pack)
+            elenco = {k: p[k][:3000] for k in ('aggiungi', 'aggiorna', 'togli')}
+            n = {k: len(p[k]) for k in ('aggiungi', 'aggiorna', 'togli')}
+            r = {'stato': 'finito', 'byte': p['byte'], 'n': n, 'per_sistema': p['per_sistema'],
+                 'elenco': elenco, 'anomalie': p['anomalie'][:50]}
+        except (OSError, KeyError, SystemExit) as e:
+            r = {'stato': 'errore', 'errore': str(e)[:200] or 'Calcolo non riuscito'}
+        with LAVORI_LOCK:
+            LAVORI[j].update(r)
+    threading.Thread(target=corri, daemon=True).start()
+    return j
 
 
 def crea(cfg):
@@ -58,11 +86,41 @@ def crea(cfg):
             r.pop('dove', None)
             self._json(json.dumps(r, ensure_ascii=False).encode())
 
+        def _sync_stato(self, q):
+            j = (q.get('id') or [''])[0]
+            with LAVORI_LOCK:
+                v = LAVORI.get(j)
+                v = dict(v) if v else None
+            if not v:
+                return self.send_error(404)
+            v.pop('chiave', None)
+            self._json(json.dumps(v, ensure_ascii=False).encode())
+
+        def _sync_avvia(self):
+            if not self._origine_ok():
+                return self.send_error(403)
+            n = int(self.headers.get('Content-Length') or 0)
+            if not 0 < n <= 4096:
+                return self.send_error(413)
+            try:
+                d = json.loads(self.rfile.read(n))
+                nome, pack = d['sorgente'], d['pack']
+                dove = sorgenti.risolte(cfg).get(nome)
+                if dove is None:
+                    return self.send_error(503, 'Scheda non collegata o sconosciuta')
+                if pack not in packs.carica_packs(cfg):
+                    return self.send_error(404, 'Pack sconosciuto')
+            except (ValueError, KeyError, TypeError, OSError):
+                return self.send_error(400)
+            self._json(json.dumps({'id': _lancia_piano(cfg, nome, dove, pack)}).encode())
+
         def do_GET(self):
             ru = urlsplit(self.path)
+            if ru.path == '/api/sync':
+                return self._sync_stato(parse_qs(ru.query))
             if ru.path == '/api/volumi':
                 return self._json(json.dumps({'schede': sorgenti.schede(cfg), 'salvate': sorgenti.salvate(cfg),
-                                              'modificabile': locale}).encode())
+                                              'modificabile': self._da_qui()}).encode())
             if ru.path == '/api/sd':
                 return self._sd(parse_qs(ru.query))
             if self.path.split('?', 1)[0] == '/api/packs':
@@ -81,8 +139,7 @@ def crea(cfg):
                 return self._sorgente('rinomina')
             if self.path.split('?', 1)[0] != '/api/packs':
                 return self.send_error(405)
-            orig = self.headers.get('Origin')
-            if orig and orig.split('://', 1)[-1] != self.headers.get('Host'):
+            if not self._origine_ok():
                 return self.send_error(403)
             if not os.path.isdir(cfg.pack):
                 return self.send_error(503, 'Cartella dei pack non raggiungibile')
@@ -102,9 +159,13 @@ def crea(cfg):
             self.send_response(204)
             self.end_headers()
 
+        def _da_qui(self):
+            # si scrive solo con il server in locale o da questo stesso PC (loopback), mai dalla rete
+            return bool(locale) or self.client_address[0] in ('127.0.0.1', '::1')
+
         def _origine_ok(self):
             orig = self.headers.get('Origin')
-            return bool(locale) and not (orig and orig.split('://', 1)[-1] != self.headers.get('Host'))
+            return self._da_qui() and not (orig and orig.split('://', 1)[-1] != self.headers.get('Host'))
 
         def _sorgente(self, azione):
             # il browser indica un nome e l'UUID di una scheda rilevata, mai un percorso
@@ -129,6 +190,8 @@ def crea(cfg):
             self.end_headers()
 
         def do_POST(self):
+            if urlsplit(self.path).path == '/api/sync':
+                return self._sync_avvia()
             self._sorgente('aggiungi')
 
         def do_DELETE(self):
