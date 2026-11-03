@@ -68,11 +68,12 @@ input[type=text],input[type=number]{flex:1;min-width:0;background:var(--pn);bord
 .piccolo{display:inline-block;width:14px;height:14px;border:2px solid var(--ln);border-top-color:var(--ac);border-radius:50%;animation:g .8s linear infinite;vertical-align:-2px}
 @keyframes g{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.prog.ind i,.piccolo{animation:none}}
+.lng{margin-left:auto;width:auto;background:var(--pn);border:1px solid var(--ln);border-radius:9px;padding:5px 8px;font:inherit;color:var(--tx)}
 </style>
 </head>
 <body>
 <div class="wrap">
- <div class="brand">romkit <small>configurazione guidata</small></div>
+ <div class="brand">romkit <small>configurazione guidata</small><select id="lng" class="lng" translate="no" aria-label="Lingua dell'interfaccia" title="Lingua dell'interfaccia"><option value="it">Italiano</option><option value="en">English</option></select></div>
  <ol class="passi" id="passi" aria-label="Avanzamento"></ol>
  <div class="card" id="card"></div>
 </div>
@@ -81,15 +82,17 @@ input[type=text],input[type=number]{flex:1;min-width:0;background:var(--pn);bord
  <ul id="ovl"></ul>
  <footer><button class="btn" id="ova" type="button">Annulla</button><button class="btn primary" id="ovs" type="button">Usa questa cartella</button></footer>
 </div></div>
+<script src="i18n.js"></script>
 <script>
 const $=id=>document.getElementById(id);
+tradDOM(document.body);selettoreLingua($('lng'));
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const S={archivio:'',dati:'',pack:'',schede:[],rete:false,porta:8765,gioca:false};
 const NP=6;let passo=0,esiste=false,okArchivio=false;
 
 async function api(p,corpo){
  const r=await fetch(p,corpo===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});
- if(!r.ok){let m=r.statusText;throw new Error(m||('Errore '+r.status))}
+ if(!r.ok){let m=r.statusText;throw new Error(m?T(m):T('Errore {c}',{c:r.status}))}
  return r.json();
 }
 
@@ -103,9 +106,9 @@ async function vai(p){
   const d=await api('/api/setup/cartelle?p='+encodeURIComponent(p));
   ovCorrente=d.percorso;$('ovp').textContent=d.percorso;
   const v=[];
-  if(d.sopra)v.push(`<li><button type="button" data-p="${esc(d.sopra)}">‹ Cartella superiore</button></li>`);
+  if(d.sopra)v.push(`<li><button type="button" data-p="${esc(d.sopra)}">${T('‹ Cartella superiore')}</button></li>`);
   d.figli.forEach(f=>v.push(`<li><button type="button" data-p="${esc(d.percorso.replace(/\/$/,'')+'/'+f)}">${esc(f)}</button></li>`));
-  if(!d.figli.length)v.push('<li style="padding:10px;color:var(--mu)">Nessuna sottocartella.</li>');
+  if(!d.figli.length)v.push('<li style="padding:10px;color:var(--mu)">'+T('Nessuna sottocartella.')+'</li>');
   $('ovl').innerHTML=v.join('');
  }catch(e){if(p)return vai('');$('ovl').innerHTML='<li style="padding:10px">'+esc(e.message)+'</li>'}
 }
@@ -114,10 +117,10 @@ $('ova').onclick=()=>{$('ov').hidden=true};
 $('ovs').onclick=()=>{ovInput.value=ovCorrente;$('ov').hidden=true;ovInput.dispatchEvent(new Event('input'))};
 
 function campo(id,etichetta,val,aiuto){
- return `<label class="l" for="${id}">${etichetta}</label><div class="riga"><input type="text" id="${id}" value="${esc(val)}" spellcheck="false"><button class="btn" type="button" data-sfoglia="${id}">Sfoglia</button></div>${aiuto?`<p class="nota">${aiuto}</p>`:''}`;
+ return `<label class="l" for="${id}">${etichetta}</label><div class="riga"><input type="text" id="${id}" value="${esc(val)}" spellcheck="false"><button class="btn" type="button" data-sfoglia="${id}">${T('Sfoglia')}</button></div>${aiuto?`<p class="nota">${aiuto}</p>`:''}`;
 }
 function nav(ind,avanti,testoAvanti){
- return `<div class="nav"><button class="btn" id="ind" type="button" ${ind?'':'style="visibility:hidden"'}>Indietro</button><button class="btn primary" id="avanti" type="button" ${avanti?'':'disabled'}>${testoAvanti||'Avanti'}</button></div>`;
+ return `<div class="nav"><button class="btn" id="ind" type="button" ${ind?'':'style="visibility:hidden"'}>${T('Indietro')}</button><button class="btn primary" id="avanti" type="button" ${avanti?'':'disabled'}>${T(testoAvanti||'Avanti')}</button></div>`;
 }
 function disegna(){
  $('passi').innerHTML=Array.from({length:NP},(_,i)=>`<li class="${i<passo?'fatto':i==passo?'ora':''}"></li>`).join('');
@@ -130,21 +133,21 @@ function vaiAvanti(){passo++;disegna()}
 
 /* 1 archivio */
 function p0(c){
- c.innerHTML=`<h1>Dove sono i tuoi giochi?</h1><p class="sotto">Scegli la cartella dell'archivio: quella che contiene una sottocartella per ogni sistema (nes, snes, psx…).</p>`+
-  campo('arc','Cartella dell\'archivio',S.archivio)+`<div id="esito"></div>`+nav(false,okArchivio);
+ c.innerHTML=`<h1>${T('Dove sono i tuoi giochi?')}</h1><p class="sotto">${T('Scegli la cartella dell\'archivio: quella che contiene una sottocartella per ogni sistema (nes, snes, psx…).')}</p>`+
+  campo('arc',T('Cartella dell\'archivio'),S.archivio)+`<div id="esito"></div>`+nav(false,okArchivio);
  const inp=$('arc');let t;
  const ctrl=async()=>{
   S.archivio=inp.value.trim();okArchivio=false;$('avanti').disabled=true;
   const e=$('esito');
   if(!S.archivio){e.innerHTML='';return}
-  e.innerHTML='<div class="esito"><span class="piccolo"></span> Controllo la cartella…</div>';
+  e.innerHTML='<div class="esito"><span class="piccolo"></span> '+T('Controllo la cartella…')+'</div>';
   try{
    const d=await api('/api/setup/scansione?p='+encodeURIComponent(S.archivio));
    if(inp.value.trim()!==S.archivio)return;
    if(d.valido){okArchivio=true;S.archivio=d.percorso;
-    e.innerHTML=`<div class="esito ok">Trovati ${d.sistemi} sistemi e ${d.giochi.toLocaleString('it')} file di gioco; ${d.con_gamelist} sistemi hanno già descrizioni e immagini (gamelist.xml).</div>`+
-     (d.con_gamelist<d.sistemi?'<p class="nota">Dove manca il gamelist.xml il catalogo mostra i titoli ricavati dal nome del file, senza immagini.</p>':'');
-   }else e.innerHTML='<div class="esito no">In questa cartella non ci sono sistemi con giochi. Scegli quella che contiene le cartelle nes, snes, psx…</div>';
+    e.innerHTML=`<div class="esito ok">${T('Trovati {s} sistemi e {g} file di gioco; {c} sistemi hanno già descrizioni e immagini (gamelist.xml).',{s:d.sistemi,g:d.giochi.toLocaleString(LOC),c:d.con_gamelist})}</div>`+
+     (d.con_gamelist<d.sistemi?'<p class="nota">'+T('Dove manca il gamelist.xml il catalogo mostra i titoli ricavati dal nome del file, senza immagini.')+'</p>':'');
+   }else e.innerHTML='<div class="esito no">'+T('In questa cartella non ci sono sistemi con giochi. Scegli quella che contiene le cartelle nes, snes, psx…')+'</div>';
   }catch(x){e.innerHTML='<div class="esito no">'+esc(x.message)+'</div>'}
   $('avanti').disabled=!okArchivio;
  };
@@ -155,12 +158,12 @@ function p0(c){
 
 /* 2 cartelle di lavoro */
 function p1(c){
- c.innerHTML=`<h1>Dove salvare il lavoro?</h1><p class="sotto">L'archivio non viene mai modificato. Il programma scrive i suoi file in due cartelle a parte.</p>`+
-  campo('dati','Catalogo (dati, descrizioni, miniature)',S.dati,'Si può rigenerare in qualsiasi momento. Servono poche centinaia di MB.')+
-  campo('pack','Pack (elenchi delle schede, gamelist ridotti, report)',S.pack,'Meglio vicino all\'archivio: contiene le scelte per ogni scheda SD.')+
+ c.innerHTML=`<h1>${T('Dove salvare il lavoro?')}</h1><p class="sotto">${T('L\'archivio non viene mai modificato. Il programma scrive i suoi file in due cartelle a parte.')}</p>`+
+  campo('dati',T('Catalogo (dati, descrizioni, miniature)'),S.dati,T('Si può rigenerare in qualsiasi momento. Servono poche centinaia di MB.'))+
+  campo('pack',T('Pack (elenchi delle schede, gamelist ridotti, report)'),S.pack,T('Meglio vicino all\'archivio: contiene le scelte per ogni scheda SD.'))+
   `<div id="esito"></div>`+nav(true,true);
  const v=()=>{S.dati=$('dati').value.trim();S.pack=$('pack').value.trim();
-  const m=!S.dati||!S.pack?'Indica entrambe le cartelle.':S.dati===S.pack?'Le due cartelle devono essere diverse.':(S.dati===S.archivio||S.pack===S.archivio)?'Non usare la cartella dell\'archivio.':'';
+  const m=T(!S.dati||!S.pack?'Indica entrambe le cartelle.':S.dati===S.pack?'Le due cartelle devono essere diverse.':(S.dati===S.archivio||S.pack===S.archivio)?'Non usare la cartella dell\'archivio.':'');
   $('esito').innerHTML=m?`<div class="esito no">${m}</div>`:'';$('avanti').disabled=!!m};
  $('dati').oninput=$('pack').oninput=v;v();
  $('avanti').onclick=vaiAvanti;
@@ -169,34 +172,34 @@ function p1(c){
 /* 3 schede */
 let volumi=null;
 function p2(c){
- c.innerHTML=`<h1>Vuoi collegare delle schede SD?</h1><p class="sotto">Se una scheda è inserita ora, la riconosco e la ricorderò per nome: poi potrai confrontarla con i pack. Si può fare anche più tardi dal catalogo.</p><div id="elenco"><span class="piccolo"></span> Cerco le schede…</div>`+nav(true,true,'Avanti');
+ c.innerHTML=`<h1>${T('Vuoi collegare delle schede SD?')}</h1><p class="sotto">${T('Se una scheda è inserita ora, la riconosco e la ricorderò per nome: poi potrai confrontarla con i pack. Si può fare anche più tardi dal catalogo.')}</p><div id="elenco"><span class="piccolo"></span> ${T('Cerco le schede…')}</div>`+nav(true,true,'Avanti');
  $('avanti').onclick=()=>{S.schede=[];document.querySelectorAll('.scheda').forEach(r=>{if(r.querySelector('input[type=checkbox]').checked){const n=r.querySelector('input[type=text]').value.trim();if(n)S.schede.push({nome:n,uuid:r.dataset.uuid})}});vaiAvanti()};
  const mostra=()=>{
   const l=volumi.filter(v=>v.percorso);
   $('elenco').innerHTML=l.length?l.map(v=>{
    const gb=(v.dimensione/1e9).toFixed(0);const sel=S.schede.find(s=>s.uuid===v.uuid);
-   return `<div class="scheda" data-uuid="${esc(v.uuid)}"><input type="checkbox" aria-label="Collega" ${sel||!S.schede.length&&v.forza==='forte'?'checked':''}><div class="d"><b>${esc(v.etichetta||'Senza nome')}</b><small>${gb} GB · ${esc(v.fs)} · ${esc(v.percorso)}</small></div><input type="text" value="${esc(sel?sel.nome:'SD '+gb+' GB')}" aria-label="Nome della scheda" maxlength="40"></div>`}).join('')
-   :'<div class="esito">Nessuna scheda riconosciuta. Va bene: puoi collegarla più tardi dal catalogo.</div>';
+   return `<div class="scheda" data-uuid="${esc(v.uuid)}"><input type="checkbox" aria-label="${T('Collega')}" ${sel||!S.schede.length&&v.forza==='forte'?'checked':''}><div class="d"><b>${esc(v.etichetta||T('Senza nome'))}</b><small>${gb} GB · ${esc(v.fs)} · ${esc(v.percorso)}</small></div><input type="text" value="${esc(sel?sel.nome:'SD '+gb+' GB')}" aria-label="${T('Nome della scheda')}" maxlength="40"></div>`}).join('')
+   :'<div class="esito">'+T('Nessuna scheda riconosciuta. Va bene: puoi collegarla più tardi dal catalogo.')+'</div>';
  };
  if(volumi)mostra();else api('/api/setup/volumi?p='+encodeURIComponent(S.archivio)).then(d=>{volumi=d.schede;mostra()}).catch(()=>{volumi=[];mostra()});
 }
 
 /* 4 rete */
 function p3(c){
- c.innerHTML=`<h1>Chi può aprire il catalogo?</h1><p class="sotto">Il catalogo è una pagina web servita da questo computer.</p>
- <label class="scelta"><input type="radio" name="rete" value="0" ${S.rete?'':'checked'}><div><b>Solo questo computer (consigliato)</b><span>Indirizzo http://localhost:${S.porta}. Nessun altro può vederlo.</span></div></label>
- <label class="scelta"><input type="radio" name="rete" value="1" ${S.rete?'checked':''}><div><b>Anche gli altri dispositivi di casa</b><span>Da telefono o da un altro PC si può solo consultare. Copiare sulle schede e cambiare le impostazioni resta possibile solo da questo computer. Non ha password: usalo solo in una rete fidata.</span></div></label>
- <label class="l" for="porta">Porta</label><div class="riga"><input type="number" id="porta" min="1024" max="65535" value="${S.porta}" style="max-width:120px"></div>`+nav(true,true);
+ c.innerHTML=`<h1>${T('Chi può aprire il catalogo?')}</h1><p class="sotto">${T('Il catalogo è una pagina web servita da questo computer.')}</p>
+ <label class="scelta"><input type="radio" name="rete" value="0" ${S.rete?'':'checked'}><div><b>${T('Solo questo computer (consigliato)')}</b><span>${T('Indirizzo http://localhost:{p}. Nessun altro può vederlo.',{p:S.porta})}</span></div></label>
+ <label class="scelta"><input type="radio" name="rete" value="1" ${S.rete?'checked':''}><div><b>${T('Anche gli altri dispositivi di casa')}</b><span>${T('Da telefono o da un altro PC si può solo consultare. Copiare sulle schede e cambiare le impostazioni resta possibile solo da questo computer. Non ha password: usalo solo in una rete fidata.')}</span></div></label>
+ <label class="l" for="porta">${T('Porta')}</label><div class="riga"><input type="number" id="porta" min="1024" max="65535" value="${S.porta}" style="max-width:120px"></div>`+nav(true,true);
  c.querySelectorAll('[name=rete]').forEach(r=>r.onchange=()=>S.rete=r.value==='1');
  $('avanti').onclick=()=>{const p=+$('porta').value;if(!(p>=1024&&p<=65535)){$('porta').focus();return}S.porta=p;vaiAvanti()};
 }
 
 /* 5 gioca */
 function p4(c){
- c.innerHTML=`<h1>Giocare dal browser?</h1><p class="sotto">Il pulsante «Gioca» apre un gioco direttamente nella pagina, con un emulatore integrato (per i sistemi a 8 e 16 bit e i portatili Nintendo).</p>
- <label class="scelta"><input type="radio" name="g" value="0" ${S.gioca?'':'checked'}><div><b>No, per ora</b><span>Puoi attivarlo in seguito rifacendo questa procedura.</span></div></label>
- <label class="scelta"><input type="radio" name="g" value="1" ${S.gioca?'checked':''}><div><b>Sì, attiva «Gioca»</b><span>Il server rende scaricabili i file delle ROM di quei sistemi.</span></div></label>
- <div class="avviso" id="av" ${S.gioca&&S.rete?'':'hidden'}>Hai scelto anche l'accesso dalla rete: chiunque sia collegato alla tua rete potrà scaricare quelle ROM. Meglio attivarlo solo se la rete è fidata.</div>`+nav(true,true);
+ c.innerHTML=`<h1>${T('Giocare dal browser?')}</h1><p class="sotto">${T('Il pulsante «Gioca» apre un gioco direttamente nella pagina, con un emulatore integrato (per i sistemi a 8 e 16 bit e i portatili Nintendo).')}</p>
+ <label class="scelta"><input type="radio" name="g" value="0" ${S.gioca?'':'checked'}><div><b>${T('No, per ora')}</b><span>${T('Puoi attivarlo in seguito rifacendo questa procedura.')}</span></div></label>
+ <label class="scelta"><input type="radio" name="g" value="1" ${S.gioca?'checked':''}><div><b>${T('Sì, attiva «Gioca»')}</b><span>${T('Il server rende scaricabili i file delle ROM di quei sistemi.')}</span></div></label>
+ <div class="avviso" id="av" ${S.gioca&&S.rete?'':'hidden'}>${T('Hai scelto anche l\'accesso dalla rete: chiunque sia collegato alla tua rete potrà scaricare quelle ROM. Meglio attivarlo solo se la rete è fidata.')}</div>`+nav(true,true);
  c.querySelectorAll('[name=g]').forEach(r=>r.onchange=()=>{S.gioca=r.value==='1';$('av').hidden=!(S.gioca&&S.rete)});
  $('avanti').onclick=vaiAvanti;
 }
@@ -204,18 +207,18 @@ function p4(c){
 /* 6 riepilogo e costruzione */
 let pollT=null;
 function p5(c){
- c.innerHTML=`<h1>Tutto pronto</h1><p class="sotto">Controlla i dati. Poi costruisco il catalogo: con un archivio grande può richiedere qualche minuto.</p>
+ c.innerHTML=`<h1>${T('Tutto pronto')}</h1><p class="sotto">${T('Controlla i dati. Poi costruisco il catalogo: con un archivio grande può richiedere qualche minuto.')}</p>
  <ul class="riep">
-  <li><b>Archivio</b><span>${esc(S.archivio)}</span></li>
-  <li><b>Catalogo</b><span>${esc(S.dati)}</span></li>
-  <li><b>Pack</b><span>${esc(S.pack)}</span></li>
-  <li><b>Schede</b><span>${S.schede.length?S.schede.map(s=>esc(s.nome)).join(', '):'nessuna'}</span></li>
-  <li><b>Accesso</b><span>${S.rete?'dalla rete di casa (sola consultazione)':'solo questo computer'}, porta ${S.porta}</span></li>
-  <li><b>Gioca</b><span>${S.gioca?'attivo':'spento'}</span></li>
+  <li><b>${T('Archivio')}</b><span>${esc(S.archivio)}</span></li>
+  <li><b>${T('Catalogo')}</b><span>${esc(S.dati)}</span></li>
+  <li><b>${T('Pack')}</b><span>${esc(S.pack)}</span></li>
+  <li><b>${T('Schede')}</b><span>${S.schede.length?S.schede.map(s=>esc(s.nome)).join(', '):T('nessuna')}</span></li>
+  <li><b>${T('Accesso')}</b><span>${T('{a}, porta {p}',{a:T(S.rete?'dalla rete di casa (sola consultazione)':'solo questo computer'),p:S.porta})}</span></li>
+  <li><b>${T('Gioca')}</b><span>${T(S.gioca?'attivo':'spento')}</span></li>
  </ul><div id="esito"></div>`+nav(true,true,'Salva e costruisci il catalogo');
  $('avanti').onclick=async()=>{
   $('avanti').disabled=true;$('ind').disabled=true;
-  $('esito').innerHTML='<div class="esito"><span class="piccolo"></span> Salvo la configurazione…</div>';
+  $('esito').innerHTML='<div class="esito"><span class="piccolo"></span> '+T('Salvo la configurazione…')+'</div>';
   try{await api('/api/setup/salva',S)}catch(e){$('esito').innerHTML='<div class="esito no">'+esc(e.message)+'</div>';$('avanti').disabled=false;$('ind').disabled=false;return}
   sorveglia();
  };
@@ -227,21 +230,21 @@ function sorveglia(){
   const e=$('esito');
   if(d.stato==='in corso'){
    const pct=d.totale?Math.round(100*d.fatti/d.totale):0;
-   e.innerHTML=`<div class="esito">Costruzione del catalogo${d.sistema?': '+esc(d.sistema):''}${d.totale?` (${d.fatti} di ${d.totale} cartelle)`:''}</div><div class="prog ${d.totale?'':'ind'}"><i style="width:${pct}%"></i></div><p class="nota">${Math.round((Date.now()-t0)/1000)} secondi trascorsi</p>`;
+   e.innerHTML=`<div class="esito">${T('Costruzione del catalogo')}${d.sistema?': '+esc(d.sistema):''}${d.totale?' '+T('({f} di {n} cartelle)',{f:d.fatti,n:d.totale}):''}</div><div class="prog ${d.totale?'':'ind'}"><i style="width:${pct}%"></i></div><p class="nota">${T('{n} secondi trascorsi',{n:Math.round((Date.now()-t0)/1000)})}</p>`;
    pollT=setTimeout(giro,800);
   }else if(d.stato==='finito'){
-   e.innerHTML=`<div class="esito ok">Catalogo pronto: ${d.giochi.toLocaleString('it')} giochi, ${d.immagini.toLocaleString('it')} con immagine.</div>
-   <div class="nav"><span></span><button class="btn primary" id="fine" type="button">Apri il catalogo</button></div>`;
+   e.innerHTML=`<div class="esito ok">${T('Catalogo pronto: {g} giochi, {i} con immagine.',{g:d.giochi.toLocaleString(LOC),i:d.immagini.toLocaleString(LOC)})}</div>
+   <div class="nav"><span></span><button class="btn primary" id="fine" type="button">${T('Apri il catalogo')}</button></div>`;
    $('fine').onclick=fine;
   }else if(d.stato==='errore'){
-   e.innerHTML='<div class="esito no">'+esc(d.errore||'Costruzione non riuscita')+'</div><div class="nav"><button class="btn" id="rip" type="button">Riprova</button><span></span></div>';
+   e.innerHTML='<div class="esito no">'+esc(T(d.errore||'Costruzione non riuscita'))+'</div><div class="nav"><button class="btn" id="rip" type="button">'+T('Riprova')+'</button><span></span></div>';
    $('rip').onclick=async()=>{await api('/api/setup/salva',S);sorveglia()};
   }else pollT=setTimeout(giro,800);
  };
  giro();
 }
 async function fine(){
- $('fine').disabled=true;$('fine').textContent='Avvio del catalogo…';
+ $('fine').disabled=true;$('fine').textContent=T('Avvio del catalogo…');
  try{await api('/api/setup/fine',{})}catch(e){}
  const dest=`${location.protocol}//${location.hostname}:${S.porta}/index.html`;
  const prova=async()=>{try{const r=await fetch(dest,{mode:'no-cors'});location.href=dest}catch(e){setTimeout(prova,700)}};
@@ -252,7 +255,7 @@ async function fine(){
  try{
   const a=await api('/api/setup/attuale');
   esiste=a.esiste;S.archivio=a.archivio;S.dati=a.dati;S.pack=a.pack;S.rete=a.rete;S.porta=a.porta;S.gioca=a.gioca;
-  if(esiste)document.querySelector('.brand small').textContent='impostazioni';
+  if(esiste)document.querySelector('.brand small').textContent=T('impostazioni');
  }catch(e){}
  disegna();
 })();

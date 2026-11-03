@@ -24,6 +24,8 @@ romkit --config prova/config.toml serve      # http://127.0.0.1:8765/index.html
 ```
 
 ## Con il tuo archivio
+L'interfaccia web (catalogo, pack, sincronizzazione e configurazione guidata) è in **italiano e inglese**: la lingua segue il browser e si cambia dal selettore in alto. I messaggi del terminale restano in italiano.
+
 1. `romkit serve` senza `config.toml`: si apre la **configurazione guidata** nel browser (archivio, cartelle di lavoro, schede, accesso dalla rete, «Gioca») e al termine costruisce il catalogo. La si riapre con il pulsante «Impostazioni» o con `romkit serve --setup`. In alternativa si può fare a mano: `cp config.example.toml config.toml`, imposta `[archivio].percorso` e lancia `romkit catalogo`.
 2. `romkit serve` e apri il catalogo; crea un pack e seleziona i giochi.
 3. `romkit pack prepara "Nome pack" CARTELLA` e controlla `report.txt`.

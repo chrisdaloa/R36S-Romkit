@@ -50,7 +50,7 @@ select{width:100%}
 .link{background:none;border:0;color:var(--mu);padding:2px 0;text-decoration:underline;text-underline-offset:3px}
 .link:hover{color:var(--tx)}
 .sortw{display:flex;align-items:center;gap:8px;color:var(--mu)}
-.sortw select{width:auto}
+.sortw select,.lng{width:auto}
 .packbtn{gap:10px}
 .packbtn .mini{width:42px;height:6px;border-radius:3px;background:var(--pn2);overflow:hidden}
 .packbtn .mini i{display:block;height:100%;width:0;background:var(--ac)}
@@ -183,6 +183,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
  <label class="sortw"><span>Ordina per</span><select id="o" aria-label="Ordine"><option value="t">Titolo</option><option value="y">Anno (recenti)</option><option value="r">Valutazione</option><option value="sz">Dimensione</option><option value="s">Sistema</option></select></label>
  <div class="seg" id="vs" role="group" aria-label="Vista"></div>
  <button id="pkb" class="btn packbtn" type="button" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M10 3v4M13 3v4"/></svg><span id="pkn">Pack</span><span class="mini" id="pkm"><i></i></span></button>
+ <select id="lng" class="lng" translate="no" aria-label="Lingua dell'interfaccia" title="Lingua dell'interfaccia"><option value="it">Italiano</option><option value="en">English</option></select>
  <a id="imp" class="btn" href="setup.html" title="Cambia archivio, cartelle, accesso e Gioca"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Impostazioni</a>
 </header>
 <div id="av" class="warn" hidden>Pack non salvati sul NAS: il NAS non è raggiungibile. Le modifiche restano in questo browser.</div>
@@ -246,24 +247,26 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
 <div id="pn" class="ov-b" hidden><div class="bx"><button class="x" id="px" type="button" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button><div id="pi"></div><div id="pt"></div></div></div>
 <div id="rs" class="ov-b" hidden><div class="bx"><button class="x" id="rx" type="button" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button><div id="rt"></div></div></div>
 <button id="più" class="btn" type="button" hidden>Mostra altri</button>
+<script src="i18n.js"></script>
 <script src="data.js"></script>
 <script>
 const GIOCABILI=new Set((window.CONFIG&&window.CONFIG.giocabili)||[]);
 const D=window.GIOCHI||[],PAG=200;
 const $=i=>document.getElementById(i);
+tradDOM(document.body);selettoreLingua($('lng'));
 const norm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 // gruppo di pulsanti con selezione singola; espone .value e l'evento change come un select
 function seg(id,opts,def){
  const e=$(id);e._v=def||'';
- opts.forEach(([v,l,t])=>{const b=document.createElement('button');b.type='button';b.dataset.v=v;b.title=t||'';
-  if(l.startsWith('<'))b.innerHTML=l;else b.textContent=l;
+ opts.forEach(([v,l,t])=>{const b=document.createElement('button');b.type='button';b.dataset.v=v;b.title=T(t||'');
+  if(l.startsWith('<'))b.innerHTML=l;else b.textContent=T(l);
   b.onclick=()=>{e.value=v;e.dispatchEvent(new Event('change'))};e.appendChild(b)});
  Object.defineProperty(e,'value',{get(){return this._v},set(v){this._v=v;[...this.children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===v))}});
  e.value=e._v}
 seg('vs',[['','<svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>','Griglia'],
  ['lista','<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>','Elenco']]);
 seg('pl',[['','Tutti'],['1','1'],['2','2+'],['4','4+']]);
-seg('mr',[['0','Tutti'],['3','3+ ★'],['4','4+ ★'],['4.5','4,5+ ★']],'0');
+seg('mr',[['0','Tutti'],['3','3+ ★'],['4','4+ ★'],['4.5',(LANG==='en'?'4.5':'4,5')+'+ ★']],'0');
 seg('pf',[['','Tutti'],['in','Nel pack'],['out','Fuori']]);
 // toglie il numero d'ordine davanti al titolo (es. «0001 Rockman 1», «004 cawing») ma non i numeri veri (1942, 720 Degrees, 007, 1000 Miglia)
 function senzaNumero(g){
@@ -272,28 +275,29 @@ function senzaNumero(g){
  return indice&&r?r:g.t}
 D.forEach(g=>{g.t0=g.t;g.t=senzaNumero(g);g.k=norm(g.t0+' '+g.t+' '+g.f);g.id=g.s+'/'+g.f});
 const conta={};D.forEach(g=>conta[g.s]=(conta[g.s]||0)+1);
-function voceSistema(v,nome,n){const b=document.createElement('button');b.type='button';b.dataset.v=v;b.append(nome);const c=document.createElement('span');c.textContent=n.toLocaleString('it');b.appendChild(c);
+function voceSistema(v,nome,n){const b=document.createElement('button');b.type='button';b.dataset.v=v;b.append(nome);const c=document.createElement('span');c.textContent=n.toLocaleString(LOC);b.appendChild(c);
  b.onclick=()=>{$('s').value=(v&&$('s').value===v)?'':v;filtra()};$('sl').appendChild(b)}
-voceSistema('','Tutti i sistemi',D.length);
+voceSistema('',T('Tutti i sistemi'),D.length);
 Object.keys(conta).sort().forEach(s=>voceSistema(s,s,conta[s]));
-const gen=[...new Set(D.flatMap(g=>g.c||[]))].sort((a,b)=>a.localeCompare(b,'it'));
+const gen=[...new Set(D.flatMap(g=>g.c||[]))].sort((a,b)=>a.localeCompare(b,LOC));
 gen.forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=x;$('ge').appendChild(o)});
 const stelle=r=>'★'.repeat(Math.floor(r))+(r%1?'½':'');
 const NL={en:'Inglese',fr:'Francese',de:'Tedesco',es:'Spagnolo',it:'Italiano',nl:'Olandese',pt:'Portoghese',sv:'Svedese',no:'Norvegese',da:'Danese',fi:'Finlandese',ja:'Giapponese',zh:'Cinese',ko:'Coreano',ru:'Russo',pl:'Polacco',ca:'Catalano',cs:'Ceco',el:'Greco',tr:'Turco',hu:'Ungherese'};
 const cl={};D.forEach(g=>(g.l||[]).forEach(x=>cl[x]=(cl[x]||0)+1));
-Object.keys(cl).sort((a,b)=>cl[b]-cl[a]).forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=(NL[x]||x)+' ('+cl[x]+')';$('lg').appendChild(o)});
-{const o=document.createElement('option');o.value='-';o.textContent='Lingua non indicata ('+D.filter(g=>!g.l).length+')';$('lg').appendChild(o)}
+Object.keys(cl).sort((a,b)=>cl[b]-cl[a]).forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=T(NL[x]||x)+' ('+cl[x]+')';$('lg').appendChild(o)});
+{const o=document.createElement('option');o.value='-';o.textContent=T('Lingua non indicata ({n})',{n:D.filter(g=>!g.l).length});$('lg').appendChild(o)}
 let ris=[],mostrati=0;
+const ST=x=>x.status+' '+T(x.statusText);
 const mb=n=>n?(n>=1e9?(n/1e9).toFixed(1)+' GB':(n/1e6).toFixed(1)+' MB'):'';
 const maxP=p=>Math.max(...(p.match(/\d+/g)||[0]).map(Number));
 function filtra(){
  const q=norm($('q').value.trim()).split(/\s+/).filter(Boolean),ge=$('ge').value,lg=$('lg').value,pl=+$('pl').value,a1=+$('a1').value,a2=+$('a2').value,mr=+$('mr').value,s=$('s').value,ni=$('ni').checked,o=$('o').value,pf=pack?$('pf').value:'';
  [...$('sl').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===s));
  ris=D.filter(g=>(!s||g.s===s)&&(!ni||!g.i)&&(!ge||(g.c&&g.c.includes(ge)))&&(!lg||(lg==='-'?!g.l:(g.l&&g.l.includes(lg))))&&(!pl||(g.p&&maxP(g.p)>=pl))&&(!a1||(g.y&&g.y>=a1))&&(!a2||(g.y&&g.y<=a2))&&(!mr||(g.r&&g.r>=mr))&&(!pf||(pf==='in')===sel.has(g.id))&&q.every(w=>g.k.includes(w)));
- ris.sort(o==='y'?(a,b)=>(b.y||0)-(a.y||0):o==='r'?(a,b)=>(b.r||0)-(a.r||0):o==='sz'?(a,b)=>b.sz-a.sz:o==='s'?(a,b)=>a.s.localeCompare(b.s)||a.t.localeCompare(b.t):(a,b)=>a.t.localeCompare(b.t,'it'));
+ ris.sort(o==='y'?(a,b)=>(b.y||0)-(a.y||0):o==='r'?(a,b)=>(b.r||0)-(a.r||0):o==='sz'?(a,b)=>b.sz-a.sz:o==='s'?(a,b)=>a.s.localeCompare(b.s)||a.t.localeCompare(b.t):(a,b)=>a.t.localeCompare(b.t,LOC));
  $('g').replaceChildren();vis.clear();mostrati=0;altri();
- $('cont').textContent=ris.length.toLocaleString('it')+' giochi';
- if(!ris.length){const v=document.createElement('p');v.style.cssText='grid-column:1/-1;color:var(--mu)';v.textContent='Nessun gioco corrisponde ai filtri. Prova ad azzerarli dal pannello a sinistra.';$('g').appendChild(v)}
+ $('cont').textContent=T('{n} giochi',{n:ris.length.toLocaleString(LOC)});
+ if(!ris.length){const v=document.createElement('p');v.style.cssText='grid-column:1/-1;color:var(--mu)';v.textContent=T('Nessun gioco corrisponde ai filtri. Prova ad azzerarli dal pannello a sinistra.');$('g').appendChild(v)}
 }
 function altri(){
  const fr=document.createDocumentFragment();
@@ -306,7 +310,7 @@ function altri(){
   const m=document.createElement('div');m.className='m';m.textContent=g.s+(g.y?' · '+g.y:'')+(g.sz?' · '+mb(g.sz):'');
   if(g.it){const b=document.createElement('span');b.className='b';b.textContent='ITA';m.appendChild(b)}
   if(g.r){const r=document.createElement('div');r.className='st';r.textContent=stelle(g.r);tx.append(t,m,r)}else{const r=document.createElement('div');tx.append(t,m,r)}
-  const cb=document.createElement('input');cb.type='checkbox';cb.className='sel';cb.checked=sel.has(g.id);cb.title='Nel pack';cb.setAttribute('aria-label','Nel pack: '+g.t);
+  const cb=document.createElement('input');cb.type='checkbox';cb.className='sel';cb.checked=sel.has(g.id);cb.title=T('Nel pack');cb.setAttribute('aria-label',T('Nel pack: {t}',{t:g.t}));
   cb.onclick=e=>e.stopPropagation();cb.onchange=()=>{imposta([g],cb.checked)};
   c.classList.toggle('on',cb.checked);vis.set(g.id,{c,cb});
   c.onclick=()=>apri(g);c.append(cb,im,tx);fr.appendChild(c)});
@@ -327,13 +331,13 @@ function apri(g){
  if(g.i){const i=new Image();i.src=g.i;i.alt=g.t;pi.appendChild(i)}
  const h2=document.createElement('h2');h2.textContent=g.t;
  const dl=document.createElement('dl');
- [['Sistema',g.s],['Anno',g.y],['Voto',g.r?stelle(g.r)+' ('+g.r+'/5)':''],['Genere',g.c?g.c.join(', ')+' ('+g.g+')':''],['Lingue',g.l?g.l.map(x=>NL[x]||x).join(', '):''],['Giocatori',g.p],['Sviluppatore',g.d],['Editore',g.e],['File',g.f],['Dimensione',mb(g.sz)]].forEach(([k,v])=>{if(!v)return;const a=document.createElement('dt'),b=document.createElement('dd');a.textContent=k;b.textContent=v;dl.append(a,b)});
+ [['Sistema',g.s],['Anno',g.y],['Voto',g.r?stelle(g.r)+' ('+g.r+'/5)':''],['Genere',g.c?g.c.join(', ')+' ('+g.g+')':''],['Lingue',g.l?g.l.map(x=>NL[x]||x).join(', '):''],['Giocatori',g.p],['Sviluppatore',g.d],['Editore',g.e],['File',g.f],['Dimensione',mb(g.sz)]].forEach(([k,v])=>{if(!v)return;const a=document.createElement('dt'),b=document.createElement('dd');a.textContent=T(k);b.textContent=v;dl.append(a,b)});
  const p=document.createElement('p');p.style.margin='0';
  const mostra=()=>{const d=(window.DESC&&window.DESC[g.s]||{})[g.f];p.textContent=d||''};
  if(window.DESC&&window.DESC[g.s])mostra();else{const sc=document.createElement('script');sc.src='desc_'+g.s+'.js';sc.onload=mostra;document.head.appendChild(sc)}
  pt.append(h2,dl,p);
- if(GIOCABILI.has(g.s)&&location.protocol.startsWith('http')){const a=document.createElement('a');a.className='gioca';a.textContent='Gioca';a.href='gioca.html?s='+encodeURIComponent(g.s)+'&f='+encodeURIComponent(g.f);pt.appendChild(a)}
- if(pack){const b=document.createElement('button');b.className='btn';b.style.marginTop='12px';const agg=()=>b.textContent=sel.has(g.id)?'Nel pack · togli':'Aggiungi al pack';agg();b.onclick=()=>{imposta([g],!sel.has(g.id));agg()};pt.appendChild(b)}
+ if(GIOCABILI.has(g.s)&&location.protocol.startsWith('http')){const a=document.createElement('a');a.className='gioca';a.textContent=T('Gioca');a.href='gioca.html?s='+encodeURIComponent(g.s)+'&f='+encodeURIComponent(g.f);pt.appendChild(a)}
+ if(pack){const b=document.createElement('button');b.className='btn';b.style.marginTop='12px';const agg=()=>b.textContent=T(sel.has(g.id)?'Nel pack · togli':'Aggiungi al pack');agg();b.onclick=()=>{imposta([g],!sel.has(g.id));agg()};pt.appendChild(b)}
  $('pn').hidden=false;
 }
 $('px').onclick=()=>$('pn').hidden=true;
@@ -343,7 +347,7 @@ addEventListener('scroll',()=>{if(!$('più').hidden&&innerHeight+scrollY>documen
 // ---- pack ----
 let P={},pack='',sel=new Set(),selSz=0;const vis=new Map();let salvaT;
 const PRESET={'128 GB':106,'64 GB':54,'32 GB':26};
-const gb=n=>(n/1e9).toFixed(1).replace('.',',')+' GB';
+const gb=n=>(LANG==='en'?(n/1e9).toFixed(1):(n/1e9).toFixed(1).replace('.',','))+' GB';
 function avviso(on){$('av').hidden=!on}
 function pannello(on){
  document.body.classList.toggle('dr',on);$('dw').hidden=!on;$('pkb').setAttribute('aria-expanded',on);
@@ -358,14 +362,14 @@ function salva(){
  },400)}
 function elenco(){
  const k=$('pk');k.replaceChildren();
- const o0=document.createElement('option');o0.value='';o0.textContent='Nessun pack';k.appendChild(o0);
+ const o0=document.createElement('option');o0.value='';o0.textContent=T('Nessun pack');k.appendChild(o0);
  Object.keys(P).sort().forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;k.appendChild(o)});
  k.value=pack}
 function barra(){
  document.body.classList.toggle('pk',!!pack);
  $('pkd').hidden=$('pfs').hidden=$('pd').hidden=!pack;$('pc').disabled=$('sy').disabled=!pack;
- $('pc').title=pack?'':'Scegli prima un pack';
- $('pkn').textContent=pack||'Pack';
+ $('pc').title=pack?'':T('Scegli prima un pack');
+ $('pkn').textContent=pack||T('Pack');
  if(!pack){$('pkm').firstChild.style.width='0';return}
  const p=P[pack],tot=selSz+p.ris*1e9,cap=p.cap*1e9;
  const a=Math.min(100,selSz/cap*100),r=Math.max(0,Math.min(100-a,p.ris*1e9/cap*100));
@@ -375,9 +379,9 @@ function barra(){
  $('pkm').firstChild.style.width=Math.min(100,tot/cap*100)+'%';
  $('pcap').value=p.cap;$('pris').value=p.ris;
  $('bg').textContent=gb(selSz);
- $('bs').textContent=sel.size.toLocaleString('it')+' giochi su '+p.cap+' GB';
+ $('bs').textContent=T('{n} giochi su {cap} GB',{n:sel.size.toLocaleString(LOC),cap:p.cap});
  const nt=$('bt');nt.classList.toggle('ov',tot>cap);
- nt.textContent=tot>cap?'Sforato di '+gb(tot-cap)+' (con riserva di '+p.ris+' GB).':'Margine di '+gb(cap-tot)+', con riserva di '+p.ris+' GB.'}
+ nt.textContent=tot>cap?T('Sforato di {x} (con riserva di {r} GB).',{x:gb(tot-cap),r:p.ris}):T('Margine di {x}, con riserva di {r} GB.',{x:gb(cap-tot),r:p.ris})}
 function attiva(n){
  pack=n;sel=new Set(n?P[n].ids:[]);selSz=0;
  if(n){const m=new Map(D.map(g=>[g.id,g.sz]));sel.forEach(i=>{if(m.has(i))selSz+=m.get(i);else sel.delete(i)})}
@@ -398,7 +402,7 @@ $('pcap').addEventListener('input',()=>{const v=+$('pcap').value;if(pack&&v>0){P
 $('pris').addEventListener('input',()=>{const v=+$('pris').value;if(pack&&v>=0){P[pack].ris=v;barra();$('pris').value=v;salva()}});
 $('pa').onclick=()=>imposta(ris,true);
 $('pr').onclick=()=>imposta(ris,false);
-$('pd').onclick=()=>{if(pack&&$('pd').dataset.c===pack){delete P[pack];pack='';salva();attiva('');$('pd').dataset.c='';$('pd').textContent='Elimina pack'}else{$('pd').dataset.c=pack;$('pd').textContent='Conferma: elimina «'+pack+'»'}};
+$('pd').onclick=()=>{if(pack&&$('pd').dataset.c===pack){delete P[pack];pack='';salva();attiva('');$('pd').dataset.c='';$('pd').textContent=T('Elimina pack')}else{$('pd').dataset.c=pack;$('pd').textContent=T('Conferma: elimina «{n}»',{n:pack})}};
 $('pe').onclick=()=>{
  const righe=D.filter(g=>sel.has(g.id)).map(g=>g.id).sort();
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([righe.join('\n')+'\n'],{type:'text/plain'}));
@@ -406,10 +410,10 @@ $('pe').onclick=()=>{
 $('ps').onclick=()=>{
  const r={};D.forEach(g=>{const x=r[g.s]||(r[g.s]={n:0,t:0,sn:0,st:0});x.n++;x.t+=g.sz;if(sel.has(g.id)){x.sn++;x.st+=g.sz}});
  const rt=$('rt');rt.replaceChildren();
- const h=document.createElement('h2');h.textContent='Pack «'+pack+'»: riepilogo per sistema';
+ const h=document.createElement('h2');h.textContent=T('Pack «{p}»: riepilogo per sistema',{p:pack});
  const tb=document.createElement('table');
- const th=document.createElement('tr');['Sistema','Scelti','Su','Peso scelto','Peso totale'].forEach(x=>{const c=document.createElement('th');c.textContent=x;th.appendChild(c)});tb.appendChild(th);
- Object.entries(r).sort((a,b)=>b[1].st-a[1].st||b[1].t-a[1].t).forEach(([s,x])=>{const tr=document.createElement('tr');[s,x.sn.toLocaleString('it'),x.n.toLocaleString('it'),gb(x.st),gb(x.t)].forEach(v=>{const c=document.createElement('td');c.textContent=v;tr.appendChild(c)});tb.appendChild(tr)});
+ const th=document.createElement('tr');['Sistema','Scelti','Su','Peso scelto','Peso totale'].forEach(x=>{const c=document.createElement('th');c.textContent=T(x);th.appendChild(c)});tb.appendChild(th);
+ Object.entries(r).sort((a,b)=>b[1].st-a[1].st||b[1].t-a[1].t).forEach(([s,x])=>{const tr=document.createElement('tr');[s,x.sn.toLocaleString(LOC),x.n.toLocaleString(LOC),gb(x.st),gb(x.t)].forEach(v=>{const c=document.createElement('td');c.textContent=v;tr.appendChild(c)});tb.appendChild(tr)});
  rt.append(h,tb);$('rs').hidden=false};
 $('rx').onclick=()=>$('rs').hidden=true;
 $('rs').addEventListener('click',e=>{if(e.target===$('rs'))$('rs').hidden=true});
@@ -429,7 +433,7 @@ async function sorgenti(sel){
  try{const r=await fetch('/api/sd');if(!r.ok)return;const n=await r.json();
   const v=await (await fetch('/api/volumi')).json();salvate=v.salvate;
   const prec=sel||$('sds').value;
-  $('sds').replaceChildren();n.forEach(x=>{const o=document.createElement('option');o.value=x.nome;o.textContent=x.nome+(STATO[x.stato]||'');$('sds').appendChild(o)});
+  $('sds').replaceChildren();n.forEach(x=>{const o=document.createElement('option');o.value=x.nome;o.textContent=x.nome+T(STATO[x.stato]||'');$('sds').appendChild(o)});
   if(prec&&n.some(x=>x.nome===prec))$('sds').value=prec;
   $('sdsec').hidden=false;
   $('sds').hidden=$('pc').hidden=!n.length;$('sy').hidden=!n.length||!v.modificabile;$('sa').hidden=!v.modificabile;$('sx').hidden=$('sr').hidden=!v.modificabile||!(($('sds').value) in salvate)}catch(e){}
@@ -437,69 +441,68 @@ async function sorgenti(sel){
 if(location.protocol.startsWith('http')){sorgenti();window.addEventListener('focus',()=>sorgenti())}
 $('sds').onchange=()=>{$('sx').hidden=$('sr').hidden=!($('sds').value in salvate)};
 $('sr').onclick=async()=>{
- const nome=$('sds').value;const nuovo=(prompt('Nuovo nome per «'+nome+'»',nome)||'').trim();if(!nuovo||nuovo===nome)return;
+ const nome=$('sds').value;const nuovo=(prompt(T('Nuovo nome per «{n}»',{n:nome}),nome)||'').trim();if(!nuovo||nuovo===nome)return;
  const r=await fetch('/api/sorgenti',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,nuovo})});
- if(!r.ok){alert('Non rinominata: '+(r.statusText||r.status));return}
+ if(!r.ok){alert(T('Non rinominata: {e}',{e:T(r.statusText||String(r.status))}));return}
  sorgenti(nuovo)};
 $('sa').onclick=async()=>{
  const v=await (await fetch('/api/volumi')).json();
  const noti=new Set(Object.values(v.salvate).map(x=>x.uuid));
  const nuove=v.schede.filter(x=>!noti.has(x.uuid));
- if(!nuove.length){alert('Nessuna scheda nuova rilevata. Serve una scheda della console collegata e montata (partizioni BOOT e EASYROMS), oppure una partizione con le cartelle dei sistemi.');return}
+ if(!nuove.length){alert(T('Nessuna scheda nuova rilevata. Serve una scheda della console collegata e montata (partizioni BOOT e EASYROMS), oppure una partizione con le cartelle dei sistemi.'));return}
  $('vol').replaceChildren();nuove.forEach(x=>{const o=document.createElement('option');o.value=x.uuid;o.disabled=!x.percorso;
-  o.textContent=(x.etichetta||'senza nome')+' · '+gb(x.dimensione)+' · '+x.fs+(x.percorso?'':' · non montata')+(x.forza==='forte'?' · scheda della console':' · da verificare');$('vol').appendChild(o)});
+  o.textContent=(x.etichetta||T('senza nome'))+' · '+gb(x.dimensione)+' · '+x.fs+(x.percorso?'':T(' · non montata'))+T(x.forza==='forte'?' · scheda della console':' · da verificare');$('vol').appendChild(o)});
  $('sf').hidden=false};
 $('ss').onclick=async()=>{
  const nome=$('nm').value.trim();if(!nome||!$('vol').value)return;
  const r=await fetch('/api/sorgenti',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,uuid:$('vol').value})});
- if(!r.ok){alert('Non salvata: '+(r.statusText||r.status));return}
+ if(!r.ok){alert(T('Non salvata: {e}',{e:T(r.statusText||String(r.status))}));return}
  $('sf').hidden=true;$('nm').value='';sorgenti(nome)};
 $('sx').onclick=async()=>{
- const nome=$('sds').value;if(!confirm('Rimuovere la sorgente «'+nome+'» dall\'elenco? Non tocca la SD.'))return;
+ const nome=$('sds').value;if(!confirm(T('Rimuovere la sorgente «{n}» dall\'elenco? Non tocca la SD.',{n:nome})))return;
  const r=await fetch('/api/sorgenti',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome})});
  if(r.ok)sorgenti()};
 $('pc').onclick=async()=>{
  const rt=$('rt');rt.replaceChildren();const h=document.createElement('h2');
- h.textContent='Controllo di «'+$('sds').value+'» rispetto al pack «'+pack+'»…';rt.append(h);$('rs').hidden=false;
+ h.textContent=T('Controllo di «{s}» rispetto al pack «{p}»…',{s:$('sds').value,p:pack});rt.append(h);$('rs').hidden=false;
  let r;try{
   const x=await fetch('/api/sd?sorgente='+encodeURIComponent($('sds').value)+'&pack='+encodeURIComponent(pack));
-  if(!x.ok)throw new Error(x.status+' '+x.statusText);r=await x.json()}
- catch(e){h.textContent='SD non raggiungibile: '+e.message;return}
- h.textContent='«'+$('sds').value+'» rispetto al pack «'+pack+'»';
+  if(!x.ok)throw new Error(ST(x));r=await x.json()}
+ catch(e){h.textContent=T('SD non raggiungibile: {e}',{e:e.message});return}
+ h.textContent=T('«{s}» rispetto al pack «{p}»',{s:$('sds').value,p:pack});
  const p=document.createElement('p');p.style.fontSize='13px';
  const tot={sd:0,atteso:0,manca:0,extra:0,diversi:0};Object.values(r.confronto).forEach(x=>{for(const k in tot)tot[k]+=x[k]});
- p.textContent=(r.spazio?'Spazio reale della SD: '+gb(r.spazio.usati)+' usati, '+gb(r.spazio.liberi)+' liberi. ':'')+tot.sd.toLocaleString('it')+' giochi sulla SD, '+tot.atteso.toLocaleString('it')+' nel pack: '+
-  tot.manca.toLocaleString('it')+' da aggiungere, '+tot.extra.toLocaleString('it')+' in più, '+tot.diversi.toLocaleString('it')+' diversi.';
+ p.textContent=(r.spazio?T('Spazio reale della SD: {u} usati, {l} liberi. ',{u:gb(r.spazio.usati),l:gb(r.spazio.liberi)}):'')+T('{sd} giochi sulla SD, {at} nel pack: {ma} da aggiungere, {ex} in più, {di} diversi.',{sd:tot.sd.toLocaleString(LOC),at:tot.atteso.toLocaleString(LOC),ma:tot.manca.toLocaleString(LOC),ex:tot.extra.toLocaleString(LOC),di:tot.diversi.toLocaleString(LOC)});
  const tb=document.createElement('table');const th=document.createElement('tr');
- ['Sistema','SD','Pack','Mancano','In più','Diversi'].forEach(t=>{const c=document.createElement('th');c.textContent=t;th.appendChild(c)});tb.appendChild(th);
+ ['Sistema','SD','Pack','Mancano','In più','Diversi'].forEach(t=>{const c=document.createElement('th');c.textContent=T(t);th.appendChild(c)});tb.appendChild(th);
  Object.entries(r.confronto).filter(([s,x])=>x.sd||x.atteso).sort((a,b)=>(b[1].manca+b[1].extra+b[1].diversi)-(a[1].manca+a[1].extra+a[1].diversi)||b[1].atteso-a[1].atteso).forEach(([s,x])=>{
-  const tr=document.createElement('tr');[s,x.sd,x.atteso,x.manca,x.extra,x.diversi].forEach((v,i)=>{const c=document.createElement('td');c.textContent=typeof v==='number'?v.toLocaleString('it'):v;
+  const tr=document.createElement('tr');[s,x.sd,x.atteso,x.manca,x.extra,x.diversi].forEach((v,i)=>{const c=document.createElement('td');c.textContent=typeof v==='number'?v.toLocaleString(LOC):v;
    if(i>=3&&v)c.style.color=i===3?'var(--wa)':i===4?'var(--er)':'var(--ac)';tr.appendChild(c)});tb.appendChild(tr)});
  rt.append(p,tb);
- if(r.dettagli.length){const d=document.createElement('details');const sm=document.createElement('summary');sm.textContent='Dettaglio (primi '+Math.min(r.dettagli.length,2000)+')';d.appendChild(sm);
+ if(r.dettagli.length){const d=document.createElement('details');const sm=document.createElement('summary');sm.textContent=T('Dettaglio (primi {n})',{n:Math.min(r.dettagli.length,2000)});d.appendChild(sm);
   const pre=document.createElement('pre');pre.style.cssText='font-size:12px;max-height:240px;overflow:auto;white-space:pre-wrap';
   pre.textContent=r.dettagli.map(x=>x[0]+' '+x[1]+'/'+x[2]).join('\n');d.appendChild(pre);rt.appendChild(d)}
 };
 
 // sincronizzazione: il server calcola il piano in background (puo' richiedere alcuni minuti), la pagina lo interroga
 const sec=n=>{n=Math.round(n);return n>=60?Math.floor(n/60)+' min '+String(n%60).padStart(2,'0')+' s':n+' s'};
-const num=n=>(n||0).toLocaleString('it');
+const num=n=>(n||0).toLocaleString(LOC);
 // testo e barra del passo corrente; pct e' null quando la durata non e' stimabile
 function descrivi(v,t0){
- const t=sec((Date.now()-t0)/1000),f=v.fase;let txt,pct=null,pre='';
+ const t=sec((Date.now()-t0)/1000),f=v.fase;let txt,pct=null;
  if(v.tipo==='applica'){
-  const k=v.passi?' (passo '+({togli:1,copia:(v.passi>2?2:1),gamelist:v.passi}[f]||1)+' di '+v.passi+')':'';
-  if(f==='togli'){txt='Sposto in «_rimossi» i file da togliere: '+num(v.fatti)+' di '+num(v.totale);pct=v.totale?v.fatti/v.totale*100:null}
-  else if(f==='copia'){txt='Copio sulla scheda: '+(v.pct||0)+'%'+(v.byte_tot?' · '+gb(v.byte_fatti||0)+' di '+gb(v.byte_tot):'')+(v.velocita?' · '+v.velocita:'')+(v.resta&&v.resta!=='0:00:00'?' · restano '+v.resta.replace(/^0:/,''):'');pct=v.pct||0}
-  else if(f==='gamelist')txt='Aggiorno i gamelist della scheda';
-  else txt='Avvio';
+  const k=v.passi?T(' (passo {k} di {n})',{k:{togli:1,copia:(v.passi>2?2:1),gamelist:v.passi}[f]||1,n:v.passi}):'';
+  if(f==='togli'){txt=T('Sposto in «_rimossi» i file da togliere: {f} di {n}',{f:num(v.fatti),n:num(v.totale)});pct=v.totale?v.fatti/v.totale*100:null}
+  else if(f==='copia'){txt=T('Copio sulla scheda: {p}%',{p:v.pct||0})+(v.byte_tot?' · '+gb(v.byte_fatti||0)+' / '+gb(v.byte_tot):'')+(v.velocita?' · '+v.velocita:'')+(v.resta&&v.resta!=='0:00:00'?T(' · restano {r}',{r:v.resta.replace(/^0:/,'')}):'');pct=v.pct||0}
+  else if(f==='gamelist')txt=T('Aggiorno i gamelist della scheda');
+  else txt=T('Avvio');
   return {txt:txt+k+' · '+t,pct};
  }
- const k=' (passo '+(v.passo||1)+' di 3)';
- if(f==='pack'){txt='Preparo il pack'+(v.sistema?': sistema «'+v.sistema+'» ('+num((v.fatti||0)+1)+' di '+num(v.totale)+')':'');pct=v.totale?(v.fatti||0)/v.totale*100:null}
- else if(f==='scheda')txt='Leggo i file della scheda: '+num(v.contati)+' trovati';
- else if(f==='confronto'){txt='Confronto la scheda con il pack: '+num(v.fatti)+' di '+num(v.totale)+' file';pct=v.totale?(v.fatti||0)/v.totale*100:null}
- else txt='Avvio il calcolo';
+ const k=T(' (passo {k} di {n})',{k:v.passo||1,n:3});
+ if(f==='pack'){txt=T('Preparo il pack')+(v.sistema?T(': sistema «{s}» ({f} di {n})',{s:v.sistema,f:num((v.fatti||0)+1),n:num(v.totale)}):'');pct=v.totale?(v.fatti||0)/v.totale*100:null}
+ else if(f==='scheda')txt=T('Leggo i file della scheda: {n} trovati',{n:num(v.contati)});
+ else if(f==='confronto'){txt=T('Confronto la scheda con il pack: {f} di {n} file',{f:num(v.fatti),n:num(v.totale)});pct=v.totale?(v.fatti||0)/v.totale*100:null}
+ else txt=T('Avvio il calcolo');
  return {txt:txt+k+' · '+t,pct};
 }
 function avanza(box,d){
@@ -515,47 +518,47 @@ const GARANZIE=['Niente viene cancellato: i giochi tolti vengono spostati in «_
 'Salvataggi, impostazioni, i Ports e i file di servizio non vengono toccati.',
 'Se le rimozioni superano il 20% della scheda ti viene chiesta una conferma in più.',
 'Le modifiche si fanno solo dal PC su cui gira il programma; dalla rete si può solo consultare.'];
-$('gu').onclick=()=>{const rt=$('rt');rt.replaceChildren();const h=document.createElement('h2');h.textContent='Come sincronizzare una scheda';rt.appendChild(h);
+$('gu').onclick=()=>{const rt=$('rt');rt.replaceChildren();const h=document.createElement('h2');h.textContent=T('Come sincronizzare una scheda');rt.appendChild(h);
  const ol=document.createElement('ol');ol.style.cssText='padding-left:20px;margin:10px 0';
- GUIDA.forEach(([t,d])=>{const li=document.createElement('li');li.style.margin='6px 0';const b=document.createElement('b');b.textContent=t+'. ';li.append(b,d);ol.appendChild(li)});rt.appendChild(ol);
- const h3=document.createElement('h3');h3.textContent='Cosa non succede mai';rt.appendChild(h3);
- const ul=document.createElement('ul');ul.style.cssText='padding-left:20px;margin:6px 0';GARANZIE.forEach(t=>{const li=document.createElement('li');li.style.margin='4px 0';li.textContent=t;ul.appendChild(li)});rt.appendChild(ul);
+ GUIDA.forEach(([t,d])=>{const li=document.createElement('li');li.style.margin='6px 0';const b=document.createElement('b');b.textContent=T(t)+'. ';li.append(b,T(d));ol.appendChild(li)});rt.appendChild(ol);
+ const h3=document.createElement('h3');h3.textContent=T('Cosa non succede mai');rt.appendChild(h3);
+ const ul=document.createElement('ul');ul.style.cssText='padding-left:20px;margin:6px 0';GARANZIE.forEach(t=>{const li=document.createElement('li');li.style.margin='4px 0';li.textContent=T(t);ul.appendChild(li)});rt.appendChild(ul);
  $('rs').hidden=false};
 $('sy').onclick=async()=>{
  const nome=$('sds').value,rt=$('rt');rt.replaceChildren();const h=document.createElement('h2');
  const p=document.createElement('p');p.style.fontSize='13px';p.className='note';rt.append(h,p);$('rs').hidden=false;
- h.textContent='Sincronizzazione di «'+nome+'» con «'+pack+'»';p.textContent='Calcolo in corso: confronto la scheda con il pack, può richiedere alcuni minuti.';
+ h.textContent=T('Sincronizzazione di «{s}» con «{p}»',{s:nome,p:pack});p.textContent=T('Calcolo in corso: confronto la scheda con il pack, può richiedere alcuni minuti.');
  let id,t0=Date.now();const br=creaBarra(p);
  try{const x=await fetch('/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sorgente:nome,pack})});
-  if(!x.ok)throw new Error(x.status+' '+x.statusText);id=(await x.json()).id}
- catch(e){p.textContent='Non avviata: '+e.message;return}
+  if(!x.ok)throw new Error(ST(x));id=(await x.json()).id}
+ catch(e){p.textContent=T('Non avviata: {e}',{e:e.message});return}
  let r;
  while(true){
   await new Promise(f=>setTimeout(f,3000));
   if($('rs').hidden)return;
-  try{const x=await fetch('/api/sync?id='+id);if(!x.ok)throw new Error(x.status+' '+x.statusText);r=await x.json()}
-  catch(e){p.textContent='Calcolo interrotto: '+e.message;return}
+  try{const x=await fetch('/api/sync?id='+id);if(!x.ok)throw new Error(ST(x));r=await x.json()}
+  catch(e){p.textContent=T('Calcolo interrotto: {e}',{e:e.message});return}
   if(r.stato!=='in corso')break;
   avanza(br,descrivi(r,t0))}
  br.b.remove();
- if(r.stato!=='finito'){p.textContent='Non riuscito: '+r.errore;return}
+ if(r.stato!=='finito'){p.textContent=T('Non riuscito: {e}',{e:T(r.errore)});return}
  const n=r.n,b=r.byte,netto=b.aggiungi+b.aggiorna-b.togli;
- p.textContent=n.aggiungi+n.aggiorna+n.togli?'Questa è solo un\'anteprima: sulla scheda non è stato modificato nulla. Variazione di spazio sulla scheda: '+(netto>=0?'+':'−')+gb(Math.abs(netto))+'.':'La scheda è già allineata al pack.';
+ p.textContent=n.aggiungi+n.aggiorna+n.togli?T('Questa è solo un\'anteprima: sulla scheda non è stato modificato nulla. Variazione di spazio sulla scheda: {v}.',{v:(netto>=0?'+':'−')+gb(Math.abs(netto))}):T('La scheda è già allineata al pack.');
  const tiles=document.createElement('div');tiles.className='row';tiles.style.margin='12px 0';
  for(const k in SY){const d=document.createElement('div');d.className='card';d.style.cssText='flex:1;margin:0';
-  const big=document.createElement('b');big.style.cssText='font-size:22px;color:'+(n[k]?SY[k][1]:'var(--mu)');big.textContent=n[k].toLocaleString('it');
-  const sm=document.createElement('div');sm.className='note';sm.textContent=SY[k][0]+' · '+gb(b[k]);d.title=SY[k][2];const sp=document.createElement('div');sp.className='note';sp.style.fontSize='12px';sp.textContent=SY[k][2];d.append(big,sm,sp);tiles.appendChild(d)}
+  const big=document.createElement('b');big.style.cssText='font-size:22px;color:'+(n[k]?SY[k][1]:'var(--mu)');big.textContent=n[k].toLocaleString(LOC);
+  const sm=document.createElement('div');sm.className='note';sm.textContent=T(SY[k][0])+' · '+gb(b[k]);d.title=T(SY[k][2]);const sp=document.createElement('div');sp.className='note';sp.style.fontSize='12px';sp.textContent=T(SY[k][2]);d.append(big,sm,sp);tiles.appendChild(d)}
  rt.appendChild(tiles);
  const ss=Object.entries(r.per_sistema);
  if(ss.length){const tb=document.createElement('table');const th=document.createElement('tr');
-  ['Sistema','Aggiungi','Aggiorna','Togli'].forEach(t=>{const c=document.createElement('th');c.textContent=t;th.appendChild(c)});tb.appendChild(th);
+  ['Sistema','Aggiungi','Aggiorna','Togli'].forEach(t=>{const c=document.createElement('th');c.textContent=T(t);th.appendChild(c)});tb.appendChild(th);
   ss.sort((a,c)=>(c[1].aggiungi[1]+c[1].aggiorna[1]+c[1].togli[1])-(a[1].aggiungi[1]+a[1].aggiorna[1]+a[1].togli[1])).forEach(([sis,x])=>{
-   const tr=document.createElement('tr');[sis,...['aggiungi','aggiorna','togli'].map(k=>x[k][0]?x[k][0].toLocaleString('it')+' · '+gb(x[k][1]):'—')].forEach((v,i)=>{const c=document.createElement('td');
-    if(!i){const cb=document.createElement('input');cb.type='checkbox';cb.checked=true;cb.dataset.s=sis;cb.className='sysel';cb.setAttribute('aria-label','Includi '+sis);cb.style.marginRight='8px';c.appendChild(cb)}
+   const tr=document.createElement('tr');[sis,...['aggiungi','aggiorna','togli'].map(k=>x[k][0]?x[k][0].toLocaleString(LOC)+' · '+gb(x[k][1]):'—')].forEach((v,i)=>{const c=document.createElement('td');
+    if(!i){const cb=document.createElement('input');cb.type='checkbox';cb.checked=true;cb.dataset.s=sis;cb.className='sysel';cb.setAttribute('aria-label',T('Includi {s}',{s:sis}));cb.style.marginRight='8px';c.appendChild(cb)}
     c.append(v);tr.appendChild(c)});tb.appendChild(tr)});
   rt.appendChild(tb)}
  for(const k in SY){if(!n[k])continue;const d=document.createElement('details');const sm=document.createElement('summary');
-  sm.textContent=SY[k][0]+' ('+n[k].toLocaleString('it')+')'+(n[k]>r.elenco[k].length?' — primi '+r.elenco[k].length.toLocaleString('it'):'');d.appendChild(sm);
+  sm.textContent=T(SY[k][0])+' ('+n[k].toLocaleString(LOC)+')'+(n[k]>r.elenco[k].length?T(' — primi {n}',{n:r.elenco[k].length.toLocaleString(LOC)}):'');d.appendChild(sm);
   const pre=document.createElement('pre');pre.style.cssText='font-size:12px;max-height:240px;overflow:auto;white-space:pre-wrap';
   pre.textContent=r.elenco[k].map(x=>x[0]).join('\n');d.appendChild(pre);rt.appendChild(d)}
  if(n.aggiungi+n.aggiorna+n.togli)applicaUI(rt,p,id,r)
@@ -563,38 +566,39 @@ $('sy').onclick=async()=>{
 function applicaUI(rt,p,id,r){
  const n=r.n,box=document.createElement('div');box.className='stack';box.style.marginTop='14px';
  const opz=(testo,k,on)=>{const l=document.createElement('label');l.className='chk';const c=document.createElement('input');c.type='checkbox';c.checked=on;l.append(c,' '+testo);return [l,c]};
- const [l1,c1]=opz('Aggiungi e aggiorna ('+(n.aggiungi+n.aggiorna).toLocaleString('it')+' file)','a',n.aggiungi+n.aggiorna>0);
- const [l2,c2]=opz('Togli ('+n.togli.toLocaleString('it')+' file): vengono spostati in «_rimossi» sulla scheda, non cancellati','t',n.togli>0);
+ const [l1,c1]=opz(T('Aggiungi e aggiorna ({n} file)',{n:(n.aggiungi+n.aggiorna).toLocaleString(LOC)}),'a',n.aggiungi+n.aggiorna>0);
+ const [l2,c2]=opz(T('Togli ({n} file): vengono spostati in «_rimossi» sulla scheda, non cancellati',{n:n.togli.toLocaleString(LOC)}),'t',n.togli>0);
  c1.disabled=!(n.aggiungi+n.aggiorna);c2.disabled=!n.togli;
- const bt=document.createElement('button');bt.type='button';bt.className='btn primary';bt.textContent='Applica le modifiche';
+ const bt=document.createElement('button');bt.type='button';bt.className='btn primary';bt.textContent=T('Applica le modifiche');
  const msg=document.createElement('p');msg.className='note';
  let armato=false;
  const sistemi=()=>[...rt.querySelectorAll('.sysel')].filter(x=>x.checked).map(x=>x.dataset.s);
- const riarma=()=>{armato=false;bt.textContent='Applica le modifiche';bt.classList.remove('danger')};
+ const riarma=()=>{armato=false;bt.textContent=T('Applica le modifiche');bt.classList.remove('danger')};
  [c1,c2,...rt.querySelectorAll('.sysel')].forEach(x=>x.addEventListener('change',riarma));
  bt.onclick=async()=>{
   const nt=c2.checked&&!c2.disabled;
-  if(!armato){armato=true;bt.textContent='Conferma: '+(c1.checked&&!c1.disabled?'copio i file scelti':'')+(c1.checked&&nt?' e ':'')+(nt?'sposto i file in _rimossi':'');return}
-  bt.disabled=true;msg.textContent='Avvio…';const br=creaBarra(msg),t0=Date.now();
+  const ag=c1.checked&&!c1.disabled;if(!ag&&!nt)return;
+  if(!armato){armato=true;bt.textContent=T(ag&&nt?'Conferma: copio i file scelti e sposto i file in _rimossi':ag?'Conferma: copio i file scelti':'Conferma: sposto i file in _rimossi');return}
+  bt.disabled=true;msg.textContent=T('Avvio…');const br=creaBarra(msg),t0=Date.now();
   const corpo={id,aggiungi:c1.checked&&!c1.disabled,togli:nt,sistemi:sistemi(),conferma_soglia:r.n.togli>0&&nt&&window._soglia===true};
   let x=await fetch('/api/sync/applica',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});
   if(x.status===409&&(await x.text()).includes('20%')){
-   msg.textContent='Le rimozioni superano il 20% della scheda. Premi ancora per confermare.';window._soglia=true;bt.disabled=false;bt.textContent='Confermo: tolgo più del 20%';bt.classList.add('danger');armato=true;return}
-  if(!x.ok){msg.textContent='Non avviata: '+(x.statusText||x.status);bt.disabled=false;riarma();return}
+   msg.textContent=T('Le rimozioni superano il 20% della scheda. Premi ancora per confermare.');window._soglia=true;bt.disabled=false;bt.textContent=T('Confermo: tolgo più del 20%');bt.classList.add('danger');armato=true;return}
+  if(!x.ok){msg.textContent=T('Non avviata: {e}',{e:T(x.statusText||String(x.status))});bt.disabled=false;riarma();return}
   const j=(await x.json()).id;let v;
   while(true){
    await new Promise(f=>setTimeout(f,1500));
-   try{const y=await fetch('/api/sync?id='+j);v=await y.json()}catch(e){msg.textContent='Collegamento perso: '+e.message;return}
+   try{const y=await fetch('/api/sync?id='+j);v=await y.json()}catch(e){msg.textContent=T('Collegamento perso: {e}',{e:e.message});return}
    if(v.stato!=='in corso')break;
    avanza(br,descrivi(v,t0))}
   br.b.remove();
   window._soglia=false;
-  if(v.stato!=='finito'){msg.textContent='Interrotta: '+v.errore+' Rifai l\'anteprima prima di riprovare.';return}
+  if(v.stato!=='finito'){msg.textContent=T('Interrotta: {e} Rifai l\'anteprima prima di riprovare.',{e:T(v.errore)});return}
   bt.remove();l1.remove();l2.remove();
-  msg.textContent='Fatto: '+v.aggiunti.toLocaleString('it')+' file copiati, '+v.tolti.toLocaleString('it')+' spostati'+(v.cestino?' in «'+v.cestino+'» sulla scheda':'')+'. Rifai la sincronizzazione per verificare che la scheda sia allineata.'}
+  msg.textContent=T('Fatto: {a} file copiati, {t} spostati{c}. Rifai la sincronizzazione per verificare che la scheda sia allineata.',{a:v.aggiunti.toLocaleString(LOC),t:v.tolti.toLocaleString(LOC),c:v.cestino?T(' in «{c}» sulla scheda',{c:v.cestino}):''})}
  box.append(l1,l2,bt,msg);rt.appendChild(box)}
 
-if(!['localhost','127.0.0.1','[::1]'].includes(location.hostname)){const i=$('imp');i.removeAttribute('href');i.setAttribute('aria-disabled','true');i.title='Disponibile solo dal PC che ospita il catalogo';i.onclick=e=>{e.preventDefault();alert('Le impostazioni si cambiano solo dal PC che ospita il catalogo (indirizzo localhost).')}}
+if(!['localhost','127.0.0.1','[::1]'].includes(location.hostname)){const i=$('imp');i.removeAttribute('href');i.setAttribute('aria-disabled','true');i.title=T('Disponibile solo dal PC che ospita il catalogo');i.onclick=e=>{e.preventDefault();alert(T('Le impostazioni si cambiano solo dal PC che ospita il catalogo (indirizzo localhost).'))}}
 caricaPack();
 </script>
 </body>
