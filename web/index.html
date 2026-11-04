@@ -39,7 +39,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .seg button:hover:not([aria-pressed=true]){color:var(--tx)}
 select,input[type=number],input[type=text]{background:var(--pn);border:1px solid var(--ln);border-radius:9px;padding:7px 10px;min-width:0}
 select{width:100%}
-.ver{color:var(--mu);font-size:11px}.ver.nuova{color:var(--er)}
+.ver{color:var(--mu);font-size:11px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;background:var(--pn);border:1px solid var(--ln);border-radius:10px;font-weight:500;color:var(--tx);text-decoration:none}
 .btn:hover{border-color:var(--mu)}
 .btn.primary{background:var(--ac);border-color:var(--ac);color:var(--act);font-weight:600}
@@ -150,7 +150,9 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
 .ov-b{position:fixed;inset:0;background:rgba(6,7,14,.62);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
 .bx{position:relative;background:var(--pn);border:1px solid var(--ln);border-radius:16px;width:100%;max-height:90vh;overflow:auto;padding:22px;box-shadow:var(--sh)}
 #pn .bx{max-width:800px;display:grid;grid-template-columns:minmax(0,260px) 1fr;gap:22px}
-#rs .bx{max-width:680px}
+#rs .bx,#ag .bx{max-width:680px}
+#ag h2{margin:0 0 8px;font-size:20px;letter-spacing:-.01em}#ag ul{margin:8px 0 14px;padding-left:20px}#ag li{margin:3px 0}#ag .azioni{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.ver{cursor:pointer;background:none;border:0;padding:0;font:inherit;font-size:11px}.ver.nuova{color:var(--ok)}.ver.errore{color:var(--er)}
 #pi img{width:100%;border-radius:10px;background:#0d0e14}
 #pn h2,#rs h2{margin:0 0 8px;font-size:20px;letter-spacing:-.01em}
 #pn dl{margin:12px 0;display:grid;grid-template-columns:auto 1fr;gap:5px 16px;font-size:13px}
@@ -185,7 +187,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
 </head>
 <body>
 <header class="top">
- <div class="brand">R36S-Romkit <small id="ver" class="ver"></small></div>
+ <div class="brand">R36S-Romkit <button id="ver" class="ver" type="button"></button></div>
  <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Cerca un titolo" aria-label="Cerca"></div>
  <span id="cont" class="count"></span>
  <span class="sp"></span>
@@ -259,6 +261,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
  </aside>
 </div>
 <div id="pn" class="ov-b" hidden><div class="bx"><button class="x" id="px" type="button" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button><div id="pi"></div><div id="pt"></div></div></div>
+<div id="ag" class="ov-b" hidden><div class="bx"><button class="x" id="agx" type="button" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button><div id="agt"></div></div></div>
 <div id="rs" class="ov-b" hidden><div class="bx"><button class="x" id="rx" type="button" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button><div id="rt"></div></div></div>
 <button id="più" class="btn" type="button" hidden>Mostra altri</button>
 <script src="i18n.js"></script>
@@ -470,12 +473,54 @@ async function sorgenti(sel){
   $('sdsec').hidden=false;leggiSpazio();
   $('sds').hidden=$('pc').hidden=!n.length;$('sy').hidden=!n.length||!v.modificabile;$('sa').hidden=!v.modificabile;$('sx').hidden=$('sr').hidden=!v.modificabile||!(($('sds').value) in salvate)}catch(e){}
 }
-async function versione(){
- try{const v=await (await fetch('/api/versione')).json();const e=$('ver');
-  e.textContent='v'+v.versione+(v.da_riavviare?' · '+T('da riavviare'):'');
-  e.title=T('Versione {v}, commit {c}',{v:v.versione,c:v.commit||'-'})+(v.da_riavviare?'. '+T('Il codice sul disco è più recente di quello in esecuzione: riavvia il server.'):'');
-  e.classList.toggle('nuova',!!v.da_riavviare)}catch(e){}
+let agg=null,aggVer=null;
+async function versione(forza){
+ try{aggVer=await (await fetch('/api/versione')).json()}catch(e){return}
+ const e=$('ver');e.textContent='v'+aggVer.versione;
+ e.title=T('Versione {v}, commit {c}',{v:aggVer.versione,c:aggVer.commit||'-'});
+ e.classList.remove('nuova','errore');
+ if(aggVer.da_riavviare){e.textContent+=' · '+T('da riavviare');e.classList.add('errore');e.title+='. '+T('Il codice sul disco è più recente di quello in esecuzione: riavvia il server.')}
+ try{const r=await fetch('/api/aggiornamento'+(forza?'?forza=1':''));if(r.ok){agg=await r.json();
+  if(agg.disponibile&&!aggVer.da_riavviare){e.textContent+=' · '+T('aggiornamento {v}',{v:agg.ultima});e.classList.add('nuova')}}}catch(x){}
 }
+function apriAgg(){
+ const t=$('agt');t.replaceChildren();
+ const el=(tag,txt,par)=>{const n=document.createElement(tag);if(txt!=null)n.textContent=txt;(par||t).appendChild(n);return n};
+ el('h2',T('Versione {v}',{v:aggVer?aggVer.versione:'?'}));
+ if(agg&&agg.attivo===false)el('p',T('Il controllo degli aggiornamenti è spento ([aggiornamenti].controlla nel config).'));
+ else if(agg&&agg.errore)el('p',T(agg.errore));
+ else if(agg&&agg.disponibile){
+  el('p',T('Disponibile la versione {v}',{v:agg.ultima})+(agg.pubblicata?' ('+agg.pubblicata+')':'')).style.fontWeight='600';
+  el('p',T('Novità'));let ul=null;
+  (agg.note||'').split('\n').forEach(r=>{r=r.trim();if(!r||r[0]==='#')return;if(/^[-*] /.test(r)){ul=ul||el('ul');el('li',r.slice(2),ul)}else{ul=null;el('p',r.replace(/^#+\s*/,''))}});
+  if(!agg.installabile)el('p',T('Questa copia non è l\'eseguibile autonomo: aggiorna con git pull oppure scarica la release.')).className='note';
+  else if(!agg.modificabile)el('p',T('Si aggiorna solo dal PC che ospita il catalogo.')).className='note';
+ }else if(agg)el('p',T('Hai l\'ultima versione.'));
+ const az=el('div',null);az.className='azioni';
+ const pr=el('p','',t);pr.className='note';
+ if(agg&&agg.disponibile&&agg.installabile&&agg.modificabile){
+  const b=el('button',T('Aggiorna e riavvia'),az);b.className='btn primary';b.type='button';
+  b.onclick=()=>installaAgg(b,pr)}
+ const c=el('button',T('Cerca aggiornamenti'),az);c.className='btn';c.type='button';
+ c.onclick=async()=>{c.disabled=true;await versione(true);apriAgg()};
+ $('ag').hidden=false;
+}
+async function installaAgg(b,pr){
+ b.disabled=true;pr.textContent=T('Avvio…');
+ const r=await fetch('/api/aggiornamento/installa',{method:'POST'});
+ if(!r.ok){pr.textContent=T('Aggiornamento non avviato');b.disabled=false;return}
+ const vecchia=aggVer.versione,ST={scarico:'Scarico il pacchetto',verifico:'Verifico la firma',estraggo:'Estraggo i file',sostituisco:'Sostituisco i file',riavvio:'Riavvio il programma'};
+ const giro=async()=>{
+  let v;try{v=await (await fetch('/api/aggiornamento/stato')).json()}catch(e){v={stato:'riavvio'}}
+  if(v.stato==='errore'){pr.textContent=T(v.errore||'Aggiornamento non riuscito');b.disabled=false;return}
+  pr.textContent=T(ST[v.stato]||'Attendo')+(v.stato==='scarico'&&v.totale?' '+Math.round(v.fatti/v.totale*100)+'%':'');
+  if(v.stato==='riavvio'){
+   try{const n=await (await fetch('/api/versione')).json();if(n.versione!==vecchia){location.reload();return}}catch(e){}
+  }
+  setTimeout(giro,1000)};
+ giro();
+}
+$('ver').onclick=apriAgg;$('agx').onclick=()=>$('ag').hidden=true;
 if(location.protocol.startsWith('http')){versione();sorgenti();window.addEventListener('focus',()=>sorgenti())}
 $('sds').onchange=()=>{$('sx').hidden=$('sr').hidden=!($('sds').value in salvate);leggiSpazio()};
 $('sr').onclick=async()=>{

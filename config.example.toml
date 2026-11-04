@@ -31,6 +31,14 @@ porta = 8765
 # Resta comunque solo da questo PC: schede, sincronizzazione e impostazioni.
 pack_da_rete = false
 
+[aggiornamenti]
+# Controllo delle nuove versioni su GitHub (solo lettura, al massimo una volta all'ora).
+# L'installazione dall'app funziona solo con l'eseguibile autonomo e solo dal PC che ospita il catalogo.
+controlla = true
+repo = "chrisdaloa/R36S-Romkit"
+# Finche' il repository e' privato serve un token GitHub di sola lettura (permesso «Contents: read»).
+token = ""
+
 [gioca]
 # Pulsante «Gioca» nel browser (EmulatorJS). Spento di default: serve le ROM a chiunque
 # raggiunga il server. Accendilo solo in rete locale fidata.

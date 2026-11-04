@@ -2,6 +2,12 @@
 
 Il numero di versione sta in `romkit/versione.py` (`NUMERO`). Si vede nella pagina, accanto al nome, e con `romkit --version`.
 
+## 0.3.0 — 2026-11-04
+- Eseguibile autonomo per Linux e Windows (macOS in preparazione): si scarica, si decomprime e si avvia con un doppio clic.
+- Aggiornamento dall'app: la versione in alto mostra le novità e, dal PC che ospita il catalogo, scarica, verifica e installa la release.
+- Il nome del programma nella pagina è «R36S-Romkit».
+- Windows: la sincronizzazione con la scheda non è ancora disponibile (serve `rsync`).
+
 ## 0.2.0 — 2026-11-04
 - Configurazione guidata al primo avvio, con la scelta «Provo con una demo».
 - Interfaccia in italiano e inglese.

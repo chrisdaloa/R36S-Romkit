@@ -2,7 +2,7 @@
 import os, json, webbrowser, ipaddress, posixpath, tempfile, threading, time, uuid
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit, parse_qs
-from . import sd, sorgenti, sync, packs, guidata, versione
+from . import sd, sorgenti, sync, packs, guidata, versione, aggiorna
 
 WEB = os.path.join(versione.RADICE, 'web')
 MAX_PACKS = 20 * 1024 * 1024
@@ -217,6 +217,24 @@ def crea(cfg):
                 return self.send_error(400)
             self._json(json.dumps({'id': _lancia_piano(cfg, nome, dove, pack)}).encode())
 
+        def _aggiorna_installa(self):
+            if not self._origine_ok():
+                return self.send_error(403)
+            if aggiorna.LAVORO.get('stato') in ('scarico', 'verifico', 'estraggo', 'sostituisco', 'riavvio'):
+                return self.send_error(409, 'Aggiornamento gia\' in corso')
+            aggiorna.LAVORO.clear()
+            aggiorna.LAVORO.update(stato='scarico', fatti=0, totale=0)
+            def corri():
+                try:
+                    nuova = aggiorna.installa(cfg, lambda: guidata.riavvia(['--config', cfg.file, 'serve']))
+                    aggiorna.LAVORO.update(stato='riavvio', versione=nuova)
+                except SystemExit as e:
+                    aggiorna.LAVORO.update(stato='errore', errore=str(e)[:300])
+                except Exception as e:
+                    aggiorna.LAVORO.update(stato='errore', errore=(str(e) or type(e).__name__)[:300])
+            threading.Thread(target=corri, daemon=True).start()
+            self._json(b'{"ok": true}')
+
         def _sync_applica(self):
             if not self._origine_ok():
                 return self.send_error(403)
@@ -265,6 +283,12 @@ def crea(cfg):
                 return _setup_api(self, 'GET', cfg.file)
             if ru.path == '/api/sync':
                 return self._sync_stato(parse_qs(ru.query))
+            if ru.path == '/api/aggiornamento':
+                r = aggiorna.pubblico(aggiorna.controlla(cfg, forza=bool(parse_qs(ru.query).get('forza')) and self._da_qui()))
+                r['modificabile'] = self._da_qui()
+                return self._json(json.dumps(r).encode())
+            if ru.path == '/api/aggiornamento/stato':
+                return self._json(json.dumps(aggiorna.LAVORO).encode())
             if ru.path == '/api/versione':
                 return self._json(json.dumps(versione.info()).encode())
             if ru.path == '/api/volumi':
@@ -351,6 +375,8 @@ def crea(cfg):
         def do_POST(self):
             if self.path.startswith('/api/setup/'):
                 return _setup_api(self, 'POST', cfg.file)
+            if urlsplit(self.path).path == '/api/aggiornamento/installa':
+                return self._aggiorna_installa()
             if urlsplit(self.path).path == '/api/sync':
                 return self._sync_avvia()
             if urlsplit(self.path).path == '/api/sync/applica':
