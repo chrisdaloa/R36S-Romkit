@@ -10,6 +10,7 @@
   'Disponibile solo dal PC che ospita il catalogo':'Only available from the PC that hosts the catalogue',
   'Le impostazioni si cambiano solo dal PC che ospita il catalogo (indirizzo localhost).':'Settings can only be changed from the PC that hosts the catalogue (localhost address).',
   'Lingua dell\'interfaccia':'Interface language',
+  'Da questo dispositivo i pack sono in sola consultazione: le modifiche restano in questo browser.':'On this device packs are read-only: changes stay in this browser.',
   'Pack non salvati sul NAS: il NAS non è raggiungibile. Le modifiche restano in questo browser.':'Packs not saved on the NAS: the NAS is unreachable. Changes stay in this browser.',
   'Azzera':'Reset','Genere':'Genre','Tutti i generi':'All genres','Lingua':'Language','Tutte le lingue':'All languages',
   'Giocatori':'Players','Voto minimo':'Minimum rating','Valutazione minima':'Minimum rating','Anno':'Year','Da':'From','A':'To','Anno da':'Year from','Anno a':'Year to',

@@ -348,7 +348,7 @@ addEventListener('scroll',()=>{if(!$('più').hidden&&innerHeight+scrollY>documen
 let P={},pack='',sel=new Set(),selSz=0;const vis=new Map();let salvaT;
 const PRESET={'128 GB':106,'64 GB':54,'32 GB':26};
 const gb=n=>(LANG==='en'?(n/1e9).toFixed(1):(n/1e9).toFixed(1).replace('.',','))+' GB';
-function avviso(on){$('av').hidden=!on}
+function avviso(on,r){$('av').hidden=!on;if(on)$('av').textContent=T(r&&r.status===403?'Da questo dispositivo i pack sono in sola consultazione: le modifiche restano in questo browser.':'Pack non salvati sul NAS: il NAS non è raggiungibile. Le modifiche restano in questo browser.')}
 function pannello(on){
  document.body.classList.toggle('dr',on);$('dw').hidden=!on;$('pkb').setAttribute('aria-expanded',on);
  try{localStorage.setItem('pannello',on?'1':'')}catch(e){}}
@@ -358,7 +358,7 @@ function salva(){
  if(pack){P[pack].ids=[...sel]}
  clearTimeout(salvaT);salvaT=setTimeout(()=>{
   try{localStorage.setItem('packs',JSON.stringify(P))}catch(e){}
-  if(location.protocol.startsWith('http'))fetch('/api/packs',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(P)}).then(r=>avviso(!r.ok)).catch(()=>avviso(true));
+  if(location.protocol.startsWith('http'))fetch('/api/packs',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(P)}).then(r=>avviso(!r.ok,r)).catch(()=>avviso(true));
  },400)}
 function elenco(){
  const k=$('pk');k.replaceChildren();

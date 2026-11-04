@@ -12,7 +12,7 @@ DEFAULT = {
         'sottocartelle': {},
         'solo_estensione': {},
     },
-    'server': {'host': '127.0.0.1', 'porta': 8765},
+    'server': {'host': '127.0.0.1', 'porta': 8765, 'pack_da_rete': False},
     'gioca': {'abilitato': False, 'sistemi': []},
     'sd': {'destinazione': '', 'sorgenti': {}, 'firma': {'avvio': 'BOOT', 'dati': 'EASYROMS'}},
     'sync': {'non_toccare': ['ports']},   # sistemi i cui file la sincronizzazione non toglie mai

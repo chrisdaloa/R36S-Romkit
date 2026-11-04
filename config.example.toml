@@ -27,6 +27,9 @@ solo_estensione = { ports = ".sh", "pico-8" = ".p8.png" }
 # il server non ha autenticazione.
 host = "127.0.0.1"
 porta = 8765
+# Se true, i pack si possono salvare anche da altri PC della rete locale (indirizzi privati).
+# Resta comunque solo da questo PC: schede, sincronizzazione e impostazioni.
+pack_da_rete = false
 
 [gioca]
 # Pulsante «Gioca» nel browser (EmulatorJS). Spento di default: serve le ROM a chiunque

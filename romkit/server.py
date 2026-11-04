@@ -1,5 +1,5 @@
 """Server locale del catalogo: pagina web, dati generati, pack e (solo se abilitato) ROM in sola lettura."""
-import os, json, posixpath, tempfile, threading, time, uuid
+import os, json, ipaddress, posixpath, tempfile, threading, time, uuid
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit, parse_qs
 from . import sd, sorgenti, sync, packs, guidata
@@ -128,6 +128,7 @@ def serve_setup(file, host='127.0.0.1', porta=8765):
 
 def crea(cfg):
     packs_file = os.path.join(cfg.pack, 'packs.json')
+    pack_rete = bool(cfg['server'].get('pack_da_rete'))
     locale = cfg['server']['host'] in ('127.0.0.1', 'localhost', '::1')
     giocabili = set(cfg['gioca']['sistemi']) if cfg['gioca']['abilitato'] else set()
 
@@ -273,7 +274,7 @@ def crea(cfg):
                 return self._sorgente('rinomina')
             if self.path.split('?', 1)[0] != '/api/packs':
                 return self.send_error(405)
-            if not self._origine_ok():
+            if not self._origine_ok(rete=True):
                 return self.send_error(403)
             if not os.path.isdir(cfg.pack):
                 return self.send_error(503, 'Cartella dei pack non raggiungibile')
@@ -297,9 +298,19 @@ def crea(cfg):
             # si scrive solo con il server in locale o da questo stesso PC (loopback), mai dalla rete
             return bool(locale) or self.client_address[0] in ('127.0.0.1', '::1')
 
-        def _origine_ok(self):
+        def _origine_ok(self, rete=False):
             orig = self.headers.get('Origin')
-            return self._da_qui() and not (orig and orig.split('://', 1)[-1] != self.headers.get('Host'))
+            stessa = not (orig and orig.split('://', 1)[-1] != self.headers.get('Host'))
+            return (self._da_qui() or (rete and pack_rete and self._rete_privata())) and stessa
+
+        def _rete_privata(self):
+            try:
+                ip = ipaddress.ip_address(self.client_address[0].split('%')[0])
+                if getattr(ip, 'ipv4_mapped', None):
+                    ip = ip.ipv4_mapped
+                return ip.is_private and not ip.is_loopback
+            except ValueError:
+                return False
 
         def _sorgente(self, azione):
             # il browser indica un nome e l'UUID di una scheda rilevata, mai un percorso
