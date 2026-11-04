@@ -101,6 +101,15 @@ body.pk .c:not(.on) .im,body.pk .c:not(.on) .tx{opacity:.6}
 body.pk .c:not(.on):hover .im,body.pk .c:not(.on):hover .tx{opacity:1}
 .prog{height:8px;border-radius:99px;background:var(--ln);overflow:hidden;margin:8px 0 2px}
 .prog i{display:block;height:100%;width:0;background:var(--ac);border-radius:99px;transition:width .4s}
+.sez{font-size:15px;font-weight:600;color:var(--tx);margin:18px 0 10px;padding-left:10px;border-left:3px solid var(--ac)}
+.sez:first-of-type{margin-top:0}
+.sez small{font-weight:400;color:var(--mu);margin-left:6px}
+.op{display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.op::before{content:"";flex:none;width:12px;height:12px;border:2px solid var(--ln);border-top-color:var(--ac);border-radius:50%;animation:gira .8s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+.spz .prog{margin:6px 0 4px}
+.spz .prog i{transition:width .4s}
+.spz.ov .prog i{background:var(--er)}
 .prog.ind i{width:35%;animation:ind 1.4s ease-in-out infinite alternate}
 @keyframes ind{from{margin-left:0}to{margin-left:65%}}
 #più{display:block;margin:0 auto 40px}
@@ -202,6 +211,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
  <main id="g"></main>
  <aside id="dw" class="drawer" aria-label="Pack e schede" hidden>
   <h2>Pack <button id="dx" class="x" type="button" aria-label="Chiudi il pannello" style="position:static"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></h2>
+  <h3 class="sez">Il pack <small id="sezp"></small></h3>
   <div class="card">
    <h3>Pack attivo</h3>
    <select id="pk" aria-label="Pack"></select>
@@ -209,6 +219,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
   </div>
   <div id="pkd" hidden>
    <div class="card">
+    <h3>Dimensione del pack</h3>
     <div class="gauge" id="bar"><div class="r"></div><div class="f"></div><div class="v"><b id="bg"></b><small id="bs"></small></div></div>
     <p class="note" id="bt"></p>
     <div class="f2">
@@ -222,10 +233,12 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
     <div class="row"><button id="ps" class="btn" type="button">Riepilogo</button><button id="pe" class="btn" type="button">Esporta elenco</button></div>
    </div>
   </div>
+  <h3 class="sez" id="sezs" hidden>La scheda <small id="sezn"></small></h3>
   <div class="card" id="sdsec" hidden>
    <h3>Scheda SD o console</h3>
    <div class="stack">
     <select id="sds" aria-label="SD o console" hidden></select>
+    <div class="spz" id="spz" hidden><div class="prog"><i></i></div><p class="note" style="margin:0" id="spt"></p><p class="note" style="margin:4px 0 0" id="spp"></p></div>
     <button id="pc" class="btn" type="button">Controlla rispetto al pack</button>
     <button id="sy" class="btn primary" type="button" title="Calcola cosa aggiungere e cosa togliere per allineare la scheda al pack. Non scrive nulla.">Sincronizza con il pack</button>
     <p class="note" style="margin:0">Allinea la scheda al pack scelto. Prima vedi cosa cambierebbe, poi decidi. <button id="gu" class="link" type="button">Come funziona</button></p>
@@ -369,7 +382,7 @@ function barra(){
  document.body.classList.toggle('pk',!!pack);
  $('pkd').hidden=$('pfs').hidden=$('pd').hidden=!pack;$('pc').disabled=$('sy').disabled=!pack;
  $('pc').title=pack?'':T('Scegli prima un pack');
- $('pkn').textContent=pack||T('Pack');
+ $('pkn').textContent=pack||T('Pack');$('sezp').textContent=pack?'«'+pack+'»':'';mostraSpazio();
  if(!pack){$('pkm').firstChild.style.width='0';return}
  const p=P[pack],tot=selSz+p.ris*1e9,cap=p.cap*1e9;
  const a=Math.min(100,selSz/cap*100),r=Math.max(0,Math.min(100-a,p.ris*1e9/cap*100));
@@ -426,6 +439,23 @@ async function caricaPack(){
  attiva(P[a]?a:'');
  if(pn)pannello(true)}
 
+// spazio della scheda scelta (usato/libero) e confronto con la dimensione del pack attivo
+let spazioSd=null;
+async function leggiSpazio(){
+ const n=$('sds').value;spazioSd=null;$('sezn').textContent=n?'«'+n+'»':'';$('sezs').hidden=$('sdsec').hidden;
+ if(!n){mostraSpazio();return}
+ try{const x=await fetch('/api/sd?spazio=1&sorgente='+encodeURIComponent(n));spazioSd=x.ok?await x.json():null;if(spazioSd&&!spazioSd.totale)spazioSd=null}
+ catch(e){spazioSd=null}
+ if($('sds').value===n)mostraSpazio()}
+function mostraSpazio(){
+ const b=$('spz'),sp=spazioSd;b.hidden=!$('sds').value;if(b.hidden)return;
+ if(!sp){b.querySelector('i').style.width='0';$('spt').textContent=T('Spazio della scheda non disponibile (scheda non collegata?).');$('spp').textContent='';b.classList.remove('ov');return}
+ b.querySelector('i').style.width=Math.min(100,sp.usati/sp.totale*100)+'%';
+ $('spt').textContent=T('Scheda: {u} usati, {l} liberi su {t}.',{u:gb(sp.usati),l:gb(sp.liberi),t:gb(sp.totale)});
+ if(!pack){$('spp').textContent='';b.classList.remove('ov');return}
+ const ok=selSz<=sp.totale;b.classList.toggle('ov',!ok);
+ $('spp').textContent=ok?T('Il pack ({p}) sta nella scheda: a sincronizzazione finita restano circa {r} liberi.',{p:gb(selSz),r:gb(sp.totale-selSz)}):T('Il pack ({p}) è più grande della scheda ({t}).',{p:gb(selSz),t:gb(sp.totale)})}
+
 // controllo della SD (sola lettura): il server legge la sorgente scelta e la confronta con il pack attivo
 let salvate={};
 const STATO={collegata:' — collegata',assente:' — non collegata'};
@@ -435,11 +465,11 @@ async function sorgenti(sel){
   const prec=sel||$('sds').value;
   $('sds').replaceChildren();n.forEach(x=>{const o=document.createElement('option');o.value=x.nome;o.textContent=x.nome+T(STATO[x.stato]||'');$('sds').appendChild(o)});
   if(prec&&n.some(x=>x.nome===prec))$('sds').value=prec;
-  $('sdsec').hidden=false;
+  $('sdsec').hidden=false;leggiSpazio();
   $('sds').hidden=$('pc').hidden=!n.length;$('sy').hidden=!n.length||!v.modificabile;$('sa').hidden=!v.modificabile;$('sx').hidden=$('sr').hidden=!v.modificabile||!(($('sds').value) in salvate)}catch(e){}
 }
 if(location.protocol.startsWith('http')){sorgenti();window.addEventListener('focus',()=>sorgenti())}
-$('sds').onchange=()=>{$('sx').hidden=$('sr').hidden=!($('sds').value in salvate)};
+$('sds').onchange=()=>{$('sx').hidden=$('sr').hidden=!($('sds').value in salvate);leggiSpazio()};
 $('sr').onclick=async()=>{
  const nome=$('sds').value;const nuovo=(prompt(T('Nuovo nome per «{n}»',{n:nome}),nome)||'').trim();if(!nuovo||nuovo===nome)return;
  const r=await fetch('/api/sorgenti',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,nuovo})});
@@ -527,20 +557,19 @@ $('gu').onclick=()=>{const rt=$('rt');rt.replaceChildren();const h=document.crea
 $('sy').onclick=async()=>{
  const nome=$('sds').value,rt=$('rt');rt.replaceChildren();const h=document.createElement('h2');
  const p=document.createElement('p');p.style.fontSize='13px';p.className='note';rt.append(h,p);$('rs').hidden=false;
- h.textContent=T('Sincronizzazione di «{s}» con «{p}»',{s:nome,p:pack});p.textContent=T('Calcolo in corso: confronto la scheda con il pack, può richiedere alcuni minuti.');
- let id,t0=Date.now();const br=creaBarra(p);
+ h.textContent=T('Sincronizzazione di «{s}» con «{p}»',{s:nome,p:pack});let id,t0=Date.now();const br=creaBarra(p);p.classList.add('op');avanza(br,descrivi({fase:''},t0));
  try{const x=await fetch('/api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sorgente:nome,pack})});
   if(!x.ok)throw new Error(ST(x));id=(await x.json()).id}
- catch(e){p.textContent=T('Non avviata: {e}',{e:e.message});return}
+ catch(e){p.classList.remove('op');br.b.remove();p.textContent=T('Non avviata: {e}',{e:e.message});return}
  let r;
  while(true){
-  await new Promise(f=>setTimeout(f,3000));
+  await new Promise(f=>setTimeout(f,1000));
   if($('rs').hidden)return;
   try{const x=await fetch('/api/sync?id='+id);if(!x.ok)throw new Error(ST(x));r=await x.json()}
-  catch(e){p.textContent=T('Calcolo interrotto: {e}',{e:e.message});return}
+  catch(e){p.classList.remove('op');p.textContent=T('Calcolo interrotto: {e}',{e:e.message});return}
   if(r.stato!=='in corso')break;
   avanza(br,descrivi(r,t0))}
- br.b.remove();
+ br.b.remove();p.classList.remove('op');
  if(r.stato!=='finito'){p.textContent=T('Non riuscito: {e}',{e:T(r.errore)});return}
  const n=r.n,b=r.byte,netto=b.aggiungi+b.aggiorna-b.togli;
  p.textContent=n.aggiungi+n.aggiorna+n.togli?T('Questa è solo un\'anteprima: sulla scheda non è stato modificato nulla. Variazione di spazio sulla scheda: {v}.',{v:(netto>=0?'+':'−')+gb(Math.abs(netto))}):T('La scheda è già allineata al pack.');
@@ -579,7 +608,7 @@ function applicaUI(rt,p,id,r){
   const nt=c2.checked&&!c2.disabled;
   const ag=c1.checked&&!c1.disabled;if(!ag&&!nt)return;
   if(!armato){armato=true;bt.textContent=T(ag&&nt?'Conferma: copio i file scelti e sposto i file in _rimossi':ag?'Conferma: copio i file scelti':'Conferma: sposto i file in _rimossi');return}
-  bt.disabled=true;msg.textContent=T('Avvio…');const br=creaBarra(msg),t0=Date.now();
+  bt.disabled=true;msg.textContent=T('Avvio…');const br=creaBarra(msg),t0=Date.now();msg.classList.add('op');
   const corpo={id,aggiungi:c1.checked&&!c1.disabled,togli:nt,sistemi:sistemi(),conferma_soglia:r.n.togli>0&&nt&&window._soglia===true};
   let x=await fetch('/api/sync/applica',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(corpo)});
   if(x.status===409&&(await x.text()).includes('20%')){
@@ -587,11 +616,11 @@ function applicaUI(rt,p,id,r){
   if(!x.ok){msg.textContent=T('Non avviata: {e}',{e:T(x.statusText||String(x.status))});bt.disabled=false;riarma();return}
   const j=(await x.json()).id;let v;
   while(true){
-   await new Promise(f=>setTimeout(f,1500));
+   await new Promise(f=>setTimeout(f,1000));
    try{const y=await fetch('/api/sync?id='+j);v=await y.json()}catch(e){msg.textContent=T('Collegamento perso: {e}',{e:e.message});return}
    if(v.stato!=='in corso')break;
    avanza(br,descrivi(v,t0))}
-  br.b.remove();
+  br.b.remove();msg.classList.remove('op');
   window._soglia=false;
   if(v.stato!=='finito'){msg.textContent=T('Interrotta: {e} Rifai l\'anteprima prima di riprovare.',{e:T(v.errore)});return}
   bt.remove();l1.remove();l2.remove();

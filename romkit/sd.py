@@ -80,6 +80,17 @@ def _spazio_ssh(dove):
         return None
 
 
+def spazio(dove):
+    """{'usati', 'liberi', 'totale'} della scheda, senza leggerne i file."""
+    if os.path.isdir(dove):
+        du = shutil.disk_usage(dove)
+        return {'usati': du.used, 'liberi': du.free, 'totale': du.total}
+    sp = _spazio_ssh(dove) if ':' in dove else None
+    if sp:
+        sp['totale'] = sp['usati'] + sp['liberi']
+    return sp
+
+
 def analizza(cfg, dove, pack=None):
     """Dati strutturati del riepilogo e del confronto (pack se indicato, altrimenti archivio)."""
     sd = inventario(cfg, dove)

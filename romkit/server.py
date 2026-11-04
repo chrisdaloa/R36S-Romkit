@@ -168,6 +168,11 @@ def crea(cfg):
                 return self.send_error(404, 'Sorgente sconosciuta')
             if risolte[nome] is None:
                 return self.send_error(503, 'Scheda non collegata')
+            if q.get('spazio'):
+                try:
+                    return self._json(json.dumps(sd.spazio(risolte[nome]) or {}).encode())
+                except (OSError, SystemExit) as e:
+                    return self.send_error(502, str(e)[:200] or 'SD non raggiungibile')
             try:
                 r = sd.analizza(cfg, risolte[nome], (q.get('pack') or [None])[0] or None)
             except (OSError, KeyError, SystemExit) as e:
