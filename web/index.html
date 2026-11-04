@@ -465,6 +465,7 @@ async function sorgenti(sel){
   const prec=sel||$('sds').value;
   $('sds').replaceChildren();n.forEach(x=>{const o=document.createElement('option');o.value=x.nome;o.textContent=x.nome+T(STATO[x.stato]||'');$('sds').appendChild(o)});
   if(prec&&n.some(x=>x.nome===prec))$('sds').value=prec;
+  else{const c=n.find(x=>x.stato==='collegata');if(c)$('sds').value=c.nome}
   $('sdsec').hidden=false;leggiSpazio();
   $('sds').hidden=$('pc').hidden=!n.length;$('sy').hidden=!n.length||!v.modificabile;$('sa').hidden=!v.modificabile;$('sx').hidden=$('sr').hidden=!v.modificabile||!(($('sds').value) in salvate)}catch(e){}
 }
