@@ -77,7 +77,7 @@
   ' in «{c}» sulla scheda':' to «{c}» on the card',
   'Sposto in «_rimossi» i file da togliere: {f} di {n}':'Moving the files to remove into «_rimossi»: {f} of {n}',
   'Copio sulla scheda: {p}%':'Copying to the card: {p}%',' · restano {r}':' · {r} left','Aggiorno i gamelist della scheda':'Updating the card\'s gamelists','Avvio':'Starting',
-  ' (passo {k} di {n})':' (step {k} of {n})','Preparo il pack':'Preparing the pack','Preparo il pack: scrivo lista e report ({n} file)':'Preparing the pack: writing list and report ({n} files)','Preparo il pack: cartella di servizio «{s}» ({f} di {n}), {m} file':'Preparing the pack: service folder «{s}» ({f} of {n}), {m} files','Preparo il pack: sistema «{s}» ({f} di {n})':'Preparing the pack: system «{s}» ({f} of {n})',
+  'da riavviare':'restart needed','Versione {v}, commit {c}':'Version {v}, commit {c}','Il codice sul disco è più recente di quello in esecuzione: riavvia il server.':'The code on disk is newer than the running one: restart the server.',' (passo {k} di {n})':' (step {k} of {n})','Preparo il pack':'Preparing the pack','Preparo il pack: scrivo lista e report ({n} file)':'Preparing the pack: writing list and report ({n} files)','Preparo il pack: cartella di servizio «{s}» ({f} di {n}), {m} file':'Preparing the pack: service folder «{s}» ({f} of {n}), {m} files','Preparo il pack: sistema «{s}» ({f} di {n})':'Preparing the pack: system «{s}» ({f} of {n})',
   'Leggo i file della scheda: {n} trovati':'Reading the card\'s files: {n} found','Confronto la scheda con il pack: {f} di {n} file':'Comparing the card with the pack: {f} of {n} files',
   'Avvio il calcolo':'Starting the calculation',': sistema «{s}» ({f} di {n})':': system «{s}» ({f} of {n})',
   // guida

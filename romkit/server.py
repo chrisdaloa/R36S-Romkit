@@ -2,7 +2,7 @@
 import os, json, ipaddress, posixpath, tempfile, threading, time, uuid
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit, parse_qs
-from . import sd, sorgenti, sync, packs, guidata
+from . import sd, sorgenti, sync, packs, guidata, versione
 
 WEB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'web')
 MAX_PACKS = 20 * 1024 * 1024
@@ -258,6 +258,8 @@ def crea(cfg):
                 return _setup_api(self, 'GET', cfg.file)
             if ru.path == '/api/sync':
                 return self._sync_stato(parse_qs(ru.query))
+            if ru.path == '/api/versione':
+                return self._json(json.dumps(versione.info()).encode())
             if ru.path == '/api/volumi':
                 return self._json(json.dumps({'schede': sorgenti.schede(cfg), 'salvate': sorgenti.salvate(cfg),
                                               'modificabile': self._da_qui()}).encode())

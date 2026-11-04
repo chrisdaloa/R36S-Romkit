@@ -1,6 +1,6 @@
 """Riga di comando: romkit <comando> [--config config.toml]."""
 import argparse, os, sys
-from . import config as C
+from . import config as C, versione
 
 
 def _cfg(a):
@@ -18,6 +18,7 @@ def _cfg(a):
 def main(argv=None):
     p = argparse.ArgumentParser(prog='romkit', description='Catalogo web e pack per schede SD di console portatili.')
     p.add_argument('--config', default='config.toml')
+    p.add_argument('--version', action='version', version='romkit ' + versione.testo())
     sub = p.add_subparsers(dest='cmd', required=True)
     sub.add_parser('catalogo', help='genera i dati del catalogo dall\'archivio')
     sv = sub.add_parser('serve', help='avvia il server del catalogo')

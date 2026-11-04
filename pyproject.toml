@@ -1,6 +1,6 @@
 [project]
 name = "romkit"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Catalogo web, pack per schede SD e scraping per archivi ROM EmulationStation (ArkOS/R36S). Nessun contenuto incluso."
 readme = "README.md"
 license = { text = "MIT" }
@@ -9,6 +9,9 @@ dependencies = ["Pillow>=9"]
 
 [project.scripts]
 romkit = "romkit.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "romkit.versione.NUMERO" }
 
 [tool.setuptools]
 packages = ["romkit"]

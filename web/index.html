@@ -39,6 +39,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .seg button:hover:not([aria-pressed=true]){color:var(--tx)}
 select,input[type=number],input[type=text]{background:var(--pn);border:1px solid var(--ln);border-radius:9px;padding:7px 10px;min-width:0}
 select{width:100%}
+.ver{color:var(--mu);font-size:11px}.ver.nuova{color:var(--er)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;background:var(--pn);border:1px solid var(--ln);border-radius:10px;font-weight:500;color:var(--tx);text-decoration:none}
 .btn:hover{border-color:var(--mu)}
 .btn.primary{background:var(--ac);border-color:var(--ac);color:var(--act);font-weight:600}
@@ -184,7 +185,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
 </head>
 <body>
 <header class="top">
- <div class="brand">romkit <small>catalogo giochi</small></div>
+ <div class="brand">romkit <small>catalogo giochi</small> <small id="ver" class="ver"></small></div>
  <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Cerca un titolo" aria-label="Cerca"></div>
  <span id="cont" class="count"></span>
  <span class="sp"></span>
@@ -469,7 +470,13 @@ async function sorgenti(sel){
   $('sdsec').hidden=false;leggiSpazio();
   $('sds').hidden=$('pc').hidden=!n.length;$('sy').hidden=!n.length||!v.modificabile;$('sa').hidden=!v.modificabile;$('sx').hidden=$('sr').hidden=!v.modificabile||!(($('sds').value) in salvate)}catch(e){}
 }
-if(location.protocol.startsWith('http')){sorgenti();window.addEventListener('focus',()=>sorgenti())}
+async function versione(){
+ try{const v=await (await fetch('/api/versione')).json();const e=$('ver');
+  e.textContent='v'+v.versione+(v.da_riavviare?' · '+T('da riavviare'):'');
+  e.title=T('Versione {v}, commit {c}',{v:v.versione,c:v.commit||'-'})+(v.da_riavviare?'. '+T('Il codice sul disco è più recente di quello in esecuzione: riavvia il server.'):'');
+  e.classList.toggle('nuova',!!v.da_riavviare)}catch(e){}
+}
+if(location.protocol.startsWith('http')){versione();sorgenti();window.addEventListener('focus',()=>sorgenti())}
 $('sds').onchange=()=>{$('sx').hidden=$('sr').hidden=!($('sds').value in salvate);leggiSpazio()};
 $('sr').onclick=async()=>{
  const nome=$('sds').value;const nuovo=(prompt(T('Nuovo nome per «{n}»',{n:nome}),nome)||'').trim();if(!nuovo||nuovo===nome)return;
