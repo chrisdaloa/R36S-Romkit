@@ -169,3 +169,76 @@ def applica(cfg, dove, piano, aggiungi=True, togli=True, sistemi=None, stato=Non
     except OSError:
         registro = None
     return {'aggiunti': len(agg), 'tolti': len(tog), 'cestino': f'_rimossi/{data}' if tog else None, 'registro': registro}
+
+
+# ---- cestino _rimossi/<data>/ sulla scheda: elenco, ripristino, svuotamento ----
+DATA_CESTINO = re.compile(r'^\d{4}-\d{2}-\d{2}_\d{6}$')
+
+
+def _cartella_cestino(dove, data):
+    if _remoto(dove) or not os.path.isdir(dove):
+        raise SystemExit('Il cestino si gestisce solo su schede montate su questo PC')
+    if not DATA_CESTINO.match(data or ''):
+        raise SystemExit('Cestino sconosciuto')
+    base = os.path.join(dove, '_rimossi', data)
+    if not os.path.isdir(base):
+        raise SystemExit('Cestino non trovato')
+    return base
+
+
+def _file_cestino(base):
+    for r, _, ff in os.walk(base):
+        for f in ff:
+            yield os.path.relpath(os.path.join(r, f), base), os.path.join(r, f)
+
+
+def cestino(dove):
+    """Elenco dei cestini sulla scheda, dal piu' recente: [{data, file, byte, sistemi}]."""
+    if _remoto(dove) or not os.path.isdir(dove):
+        return []
+    base = os.path.join(dove, '_rimossi')
+    if not os.path.isdir(base):
+        return []
+    out = []
+    for data in sorted(os.listdir(base), reverse=True):
+        if not DATA_CESTINO.match(data) or not os.path.isdir(os.path.join(base, data)):
+            continue
+        n, tot, sis = 0, 0, {}
+        for rel, p in _file_cestino(os.path.join(base, data)):
+            n += 1
+            sz = os.path.getsize(p)
+            tot += sz
+            s = rel.split(os.sep, 1)[0]
+            sis[s] = sis.get(s, 0) + 1
+        out.append({'data': data, 'file': n, 'byte': tot, 'sistemi': sis})
+    return out
+
+
+def ripristina(dove, data, stato=None):
+    """Rimette i file del cestino al loro posto. Non sovrascrive mai: se sulla scheda c'e' gia' un file con
+    lo stesso nome, quello nel cestino resta dov'e'. Ritorna {'ripristinati', 'rimasti'}."""
+    base = _cartella_cestino(dove, data)
+    voci = [(rel, p) for rel, p in _file_cestino(base) if _sicuro(rel.replace(os.sep, '/'))]
+    stato = stato if stato is not None else {}
+    stato.update(fase='ripristino', fatti=0, totale=len(voci))
+    ok = 0
+    for i, (rel, p) in enumerate(voci):
+        dst = os.path.join(dove, rel)
+        if not os.path.exists(dst):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            os.replace(p, dst)
+            ok += 1
+        stato['fatti'] = i + 1
+    for r, dd, ff in os.walk(base, topdown=False):     # toglie le cartelle rimaste vuote, cestino compreso
+        if not os.listdir(r):
+            os.rmdir(r)
+    return {'ripristinati': ok, 'rimasti': len(voci) - ok}
+
+
+def svuota(dove, data):
+    """Cancella definitivamente un cestino. Ritorna {'cancellati', 'byte'}."""
+    base = _cartella_cestino(dove, data)
+    voci = list(_file_cestino(base))
+    byte = sum(os.path.getsize(p) for _, p in voci)
+    shutil.rmtree(base)
+    return {'cancellati': len(voci), 'byte': byte}

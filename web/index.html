@@ -150,7 +150,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
 .ov-b{position:fixed;inset:0;background:rgba(6,7,14,.62);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
 .bx{position:relative;background:var(--pn);border:1px solid var(--ln);border-radius:16px;width:100%;max-height:90vh;overflow:auto;padding:22px;box-shadow:var(--sh)}
 #pn .bx{max-width:800px;display:grid;grid-template-columns:minmax(0,260px) 1fr;gap:22px}
-#rs .bx,#ag .bx{max-width:680px}
+#rs .bx,#ag .bx,#ct .bx{max-width:680px}
 #ag h2{margin:0 0 8px;font-size:20px;letter-spacing:-.01em}#ag ul{margin:8px 0 14px;padding-left:20px}#ag li{margin:3px 0}#ag .azioni{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 .ver{cursor:pointer;background:none;border:0;padding:0;font:inherit;font-size:11px}.ver.nuova{color:var(--ok)}.ver.errore{color:var(--er)}
 #pi img{width:100%;border-radius:10px;background:#0d0e14}
@@ -242,6 +242,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
    <div class="stack">
     <select id="sds" aria-label="SD o console" hidden></select>
     <div class="spz" id="spz" hidden><div class="prog"><i></i></div><p class="note" style="margin:0" id="spt"></p><p class="note" style="margin:4px 0 0" id="spp"></p></div>
+    <button id="ctb" class="btn" type="button" hidden>Cestino della scheda</button>
     <button id="pc" class="btn" type="button">Controlla rispetto al pack</button>
     <button id="sy" class="btn primary" type="button" title="Calcola cosa aggiungere e cosa togliere per allineare la scheda al pack. Non scrive nulla.">Sincronizza con il pack</button>
     <p class="note" style="margin:0">Allinea la scheda al pack scelto. Prima vedi cosa cambierebbe, poi decidi. <button id="gu" class="link" type="button">Come funziona</button></p>
@@ -261,6 +262,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
  </aside>
 </div>
 <div id="pn" class="ov-b" hidden><div class="bx"><button class="x" id="px" type="button" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button><div id="pi"></div><div id="pt"></div></div></div>
+<div id="ct" class="ov-b" hidden><div class="bx"><button class="x" id="ctx" type="button" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button><div id="ctt"></div></div></div>
 <div id="ag" class="ov-b" hidden><div class="bx"><button class="x" id="agx" type="button" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button><div id="agt"></div></div></div>
 <div id="rs" class="ov-b" hidden><div class="bx"><button class="x" id="rx" type="button" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button><div id="rt"></div></div></div>
 <button id="più" class="btn" type="button" hidden>Mostra altri</button>
@@ -460,6 +462,45 @@ function mostraSpazio(){
  const ok=selSz<=sp.totale;b.classList.toggle('ov',!ok);
  $('spp').textContent=ok?T('Il pack ({p}) sta nella scheda: a sincronizzazione finita restano circa {r} liberi.',{p:gb(selSz),r:gb(sp.totale-selSz)}):T('Il pack ({p}) è più grande della scheda ({t}).',{p:gb(selSz),t:gb(sp.totale)})}
 
+
+// cestino della scheda (_rimossi): elenco, ripristino e svuotamento, solo dal PC che ospita il catalogo
+let ctSc=[];
+const dimC=n=>n>=1e9?gb(n):(n>=1e6?Math.round(n/1e6):Math.max(1,Math.round(n/1e3)))+(n>=1e6?' MB':' KB');
+async function leggiCestino(){
+ const n=$('sds').value,b=$('ctb');b.hidden=true;ctSc=[];if(!n)return;
+ try{const v=await (await fetch('/api/volumi')).json();if(!v.modificabile)return;
+  const x=await fetch('/api/sd?cestino=1&sorgente='+encodeURIComponent(n));if(!x.ok||$('sds').value!==n)return;
+  ctSc=await x.json();if(!ctSc.length)return;
+  b.textContent=T('Cestino della scheda')+' ('+dimC(ctSc.reduce((a,c)=>a+c.byte,0))+')';b.hidden=false}catch(e){}}
+function apriCestino(msg){
+ const t=$('ctt');t.replaceChildren();
+ const el=(tag,txt,par)=>{const n=document.createElement(tag);if(txt!=null)n.textContent=txt;(par||t).appendChild(n);return n};
+ el('h2',T('Cestino della scheda'));
+ el('p',T('I giochi tolti da una sincronizzazione sono qui, non sono stati cancellati. Puoi rimetterli al loro posto oppure cancellarli per liberare spazio.')).className='note';
+ if(msg)el('p',msg).style.fontWeight='600';
+ if(!ctSc.length)el('p',T('Il cestino è vuoto.'));
+ ctSc.forEach(c=>{
+  const r=el('div');r.className='card';r.style.margin='10px 0';
+  const d=c.data.replace('_',' ').replace(/(\d\d)(\d\d)(\d\d)$/,'$1:$2:$3');
+  el('h3',d,r);
+  el('p',T('{n} file, {s}',{n:num(c.file),s:dimC(c.byte)})+' — '+Object.keys(c.sistemi).sort().join(', '),r).className='note';
+  const az=el('div',null,r);az.className='row';az.style.marginTop='10px';
+  const rp=el('button',T('Rimetti a posto'),az);rp.className='btn primary sm';rp.type='button';
+  const sv=el('button',T('Cancella definitivamente'),az);sv.className='btn sm danger';sv.type='button';
+  const pr=el('p','',r);pr.className='note';
+  const agisci=async a=>{rp.disabled=sv.disabled=true;pr.textContent=T('Attendo');
+   try{const x=await fetch('/api/sd/cestino',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sorgente:$('sds').value,data:c.data,azione:a})});
+    if(!x.ok)throw new Error(x.statusText||x.status);const j=await x.json();
+    await leggiCestino();leggiSpazio();
+    apriCestino(a==='ripristina'?T('Rimessi a posto {n} file.',{n:num(j.ripristinati)})+(j.rimasti?' '+T('{n} file non sono stati rimessi perché sulla scheda ce n\'è già uno con lo stesso nome: restano nel cestino.',{n:num(j.rimasti)}):''):T('Cancellati {n} file ({s}).',{n:num(j.cancellati),s:dimC(j.byte)}));
+   }catch(e){rp.disabled=sv.disabled=false;pr.textContent=T('Operazione non riuscita')+': '+e.message}};
+  rp.onclick=()=>agisci('ripristina');
+  let armato=false;sv.onclick=()=>{if(!armato){armato=true;sv.textContent=T('Conferma: i file non si potranno recuperare');setTimeout(()=>{armato=false;sv.textContent=T('Cancella definitivamente')},6000);return}agisci('svuota')};
+ });
+ if(ctSc.length)el('p',T('Dopo aver rimesso a posto dei giochi, una nuova sincronizzazione con lo stesso pack li toglie di nuovo. Le immagini e le descrizioni nel gamelist non vengono ripristinate.')).className='note';
+ $('ct').hidden=false}
+$('ctb').onclick=()=>apriCestino();$('ctx').onclick=()=>$('ct').hidden=true;
+
 // controllo della SD (sola lettura): il server legge la sorgente scelta e la confronta con il pack attivo
 let salvate={};
 const STATO={collegata:' — collegata',assente:' — non collegata'};
@@ -470,7 +511,7 @@ async function sorgenti(sel){
   $('sds').replaceChildren();n.forEach(x=>{const o=document.createElement('option');o.value=x.nome;o.textContent=x.nome+T(STATO[x.stato]||'');$('sds').appendChild(o)});
   if(prec&&n.some(x=>x.nome===prec))$('sds').value=prec;
   else{const c=n.find(x=>x.stato==='collegata');if(c)$('sds').value=c.nome}
-  $('sdsec').hidden=false;leggiSpazio();
+  $('sdsec').hidden=false;leggiSpazio();leggiCestino();
   $('sds').hidden=$('pc').hidden=!n.length;$('sy').hidden=!n.length||!v.modificabile;$('sa').hidden=!v.modificabile;$('sx').hidden=$('sr').hidden=!v.modificabile||!(($('sds').value) in salvate)}catch(e){}
 }
 let agg=null,aggVer=null;

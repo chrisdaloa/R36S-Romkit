@@ -2,6 +2,19 @@
 // in italiano e lo traduce con EN in inglese. {nome} nei testi viene sostituito dai valori passati.
 (function(){
  const EN={
+  // cestino della scheda
+  'Cestino della scheda':'Card bin',
+  'I giochi tolti da una sincronizzazione sono qui, non sono stati cancellati. Puoi rimetterli al loro posto oppure cancellarli per liberare spazio.':'Games removed by a sync are here, they have not been deleted. You can put them back or delete them to free space.',
+  'Il cestino è vuoto.':'The bin is empty.',
+  '{n} file, {s}':'{n} files, {s}',
+  'Rimetti a posto':'Put back',
+  'Cancella definitivamente':'Delete permanently',
+  'Conferma: i file non si potranno recuperare':'Confirm: the files cannot be recovered',
+  'Rimessi a posto {n} file.':'{n} files put back.',
+  "{n} file non sono stati rimessi perché sulla scheda ce n'è già uno con lo stesso nome: restano nel cestino.":'{n} files were not put back because the card already has one with the same name: they stay in the bin.',
+  'Cancellati {n} file ({s}).':'{n} files deleted ({s}).',
+  'Operazione non riuscita':'Operation failed',
+  'Dopo aver rimesso a posto dei giochi, una nuova sincronizzazione con lo stesso pack li toglie di nuovo. Le immagini e le descrizioni nel gamelist non vengono ripristinate.':'After putting games back, a new sync with the same pack removes them again. Images and descriptions in the gamelist are not restored.',
   // intestazione e filtri
   'Catalogo giochi':'Game catalogue','catalogo giochi':'game catalogue','Cerca un titolo':'Search a title','Cerca':'Search',
   'Filtri':'Filters','Ordina per':'Sort by','Ordine':'Order','Titolo':'Title','Anno (recenti)':'Year (newest)','Valutazione':'Rating',

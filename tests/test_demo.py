@@ -35,6 +35,33 @@ class Fumo(unittest.TestCase):
             self.assertIn(('+', 'gba', 'Tiny Hero (Europe).zip'), dett)
             self.assertIn(('-', 'snes', 'Pixel Kart (USA).zip'), dett)
 
+    def test_cestino_scheda(self):
+        from romkit import sync
+        with tempfile.TemporaryDirectory() as t:
+            def scrivi(rel, txt='x'):
+                p = os.path.join(t, rel)
+                os.makedirs(os.path.dirname(p), exist_ok=True)
+                open(p, 'w').write(txt)
+            scrivi('_rimossi/2026-11-04_134314/nes/a.nes', 'aaa')
+            scrivi('_rimossi/2026-11-04_134314/snes/b.sfc', 'bb')
+            scrivi('_rimossi/2026-11-04_134314/snes/c.sfc', 'cc')
+            scrivi('_rimossi/non-una-data/nes/z.nes')
+            scrivi('snes/c.sfc', 'nuovo')                      # gia' presente: non va sovrascritto
+            c = sync.cestino(t)
+            self.assertEqual([(x['data'], x['file'], x['byte']) for x in c], [('2026-11-04_134314', 3, 7)])
+            self.assertEqual(c[0]['sistemi'], {'nes': 1, 'snes': 2})
+            for brutta in ('../x', 'non-una-data', '2026-11-04_000000'):
+                with self.assertRaises(SystemExit):
+                    sync.ripristina(t, brutta)
+            r = sync.ripristina(t, '2026-11-04_134314')
+            self.assertEqual(r, {'ripristinati': 2, 'rimasti': 1})
+            self.assertEqual(open(os.path.join(t, 'nes/a.nes')).read(), 'aaa')
+            self.assertEqual(open(os.path.join(t, 'snes/c.sfc')).read(), 'nuovo')
+            self.assertEqual(os.listdir(os.path.join(t, '_rimossi/2026-11-04_134314/snes')), ['c.sfc'])
+            self.assertEqual(sync.svuota(t, '2026-11-04_134314'), {'cancellati': 1, 'byte': 2})
+            self.assertEqual(sync.cestino(t), [])
+            self.assertTrue(os.path.isdir(os.path.join(t, '_rimossi/non-una-data')))
+
     def test_sorgenti_per_uuid(self):
         from romkit import sorgenti
         with tempfile.TemporaryDirectory() as t:

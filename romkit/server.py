@@ -175,6 +175,11 @@ def crea(cfg):
                 return self.send_error(404, 'Sorgente sconosciuta')
             if risolte[nome] is None:
                 return self.send_error(503, 'Scheda non collegata')
+            if q.get('cestino'):
+                try:
+                    return self._json(json.dumps(sync.cestino(risolte[nome])).encode())
+                except (OSError, SystemExit) as e:
+                    return self.send_error(502, str(e)[:200] or 'SD non raggiungibile')
             if q.get('spazio'):
                 try:
                     return self._json(json.dumps(sd.spazio(risolte[nome]) or {}).encode())
@@ -276,6 +281,31 @@ def crea(cfg):
                     LAVORI[j].pop('piano', None)
             threading.Thread(target=corri, daemon=True).start()
             self._json(json.dumps({'id': j}).encode())
+
+        def _cestino_azione(self):
+            if not self._origine_ok():
+                return self.send_error(403)
+            n = int(self.headers.get('Content-Length') or 0)
+            if not 0 < n <= 4096:
+                return self.send_error(413)
+            try:
+                d = json.loads(self.rfile.read(n))
+                nome, data, azione = d['sorgente'], d['data'], d['azione']
+                if azione not in ('ripristina', 'svuota'):
+                    return self.send_error(400)
+                dove = sorgenti.risolte(cfg).get(nome)
+                if dove is None:
+                    return self.send_error(503, 'Scheda non collegata o sconosciuta')
+            except (ValueError, KeyError, TypeError):
+                return self.send_error(400)
+            with LAVORI_LOCK:
+                if any(x['stato'] == 'in corso' and x['chiave'][0] == nome for x in LAVORI.values()):
+                    return self.send_error(409, 'Un\'altra operazione su questa scheda e\' in corso')
+            try:
+                r = sync.ripristina(dove, data) if azione == 'ripristina' else sync.svuota(dove, data)
+            except (OSError, SystemExit) as e:
+                return self.send_error(502, str(e)[:200] or 'Operazione sul cestino non riuscita')
+            self._json(json.dumps(r).encode())
 
         def do_GET(self):
             ru = urlsplit(self.path)
@@ -381,6 +411,8 @@ def crea(cfg):
                 return self._sync_avvia()
             if urlsplit(self.path).path == '/api/sync/applica':
                 return self._sync_applica()
+            if urlsplit(self.path).path == '/api/sd/cestino':
+                return self._cestino_azione()
             self._sorgente('aggiungi')
 
         def do_DELETE(self):
