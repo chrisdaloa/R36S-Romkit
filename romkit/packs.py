@@ -78,7 +78,7 @@ def prepara(cfg, nome, cartella, libero=None, avanza=None):
 
     for k, s in enumerate(sorted(per_sis)):
         if avanza:
-            avanza(s, k, len(per_sis))
+            avanza(s, k, len(per_sis), sub='', file=0)
         base = os.path.join(s, sottocart.get(s, ''))
         sdir = os.path.join(arch, base)
         if not os.path.isdir(sdir):
@@ -136,10 +136,12 @@ def prepara(cfg, nome, cartella, libero=None, avanza=None):
             note.append(f'{s}: {len(fatti) - tenuti} giochi senza voce nel gamelist (niente immagine/descrizione)')
 
     servizio = []
-    for d in cfg['pack']['servizio']:
-        if not os.path.isdir(os.path.join(arch, d)):
-            continue
+    cart = [d for d in cfg['pack']['servizio'] if os.path.isdir(os.path.join(arch, d))]
+    for kd, d in enumerate(cart):
+        if avanza:
+            avanza(d, kd, len(cart), sub='servizio', file=0)
         tab.setdefault(d, {'n': 0, 'rom': 0, 'media': 0, 'servizio': 0})
+        nf = 0
         for r, dd, ff in os.walk(os.path.join(arch, d)):
             dd[:] = [x for x in dd if not _escluso(x, escludi)]
             for x in ff:
@@ -149,6 +151,9 @@ def prepara(cfg, nome, cartella, libero=None, avanza=None):
                 if rel in lista:
                     continue
                 lista.add(rel)
+                nf += 1
+                if avanza and nf % 100 == 0:
+                    avanza(d, kd, len(cart), sub='servizio', file=nf)
                 sz = os.path.getsize(os.path.join(r, x))
                 tot['servizio'] += sz
                 tab[d]['servizio'] += sz
@@ -156,6 +161,8 @@ def prepara(cfg, nome, cartella, libero=None, avanza=None):
                     anomalie.append(f'NOME NON VALIDO PER exFAT  {rel}')
         servizio.append(d)
 
+    if avanza:
+        avanza('', len(cart), len(cart), sub='scrivo', file=len(lista))
     with open(os.path.join(dest, 'lista-copia.txt'), 'w') as fh:
         fh.write('\n'.join(sorted(lista)) + '\n')
     totale = sum(tot.values())

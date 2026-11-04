@@ -44,7 +44,7 @@ def piano(cfg, dove, pack, cartella='_anteprima', stato=None):
     salvataggi, cartelle di servizio, sistemi fuori dal pack e file estranei all'archivio non vengono mai proposti."""
     stato = stato if stato is not None else {}
     stato.update(fase='pack', passo=1)
-    r = packs.prepara(cfg, pack, cartella, avanza=lambda s, k, n: stato.update(sistema=s, fatti=k, totale=n))
+    r = packs.prepara(cfg, pack, cartella, avanza=lambda s, k, n, **x: stato.update(sistema=s, fatti=k, totale=n, **x))
     with open(os.path.join(r['dest'], 'lista-copia.txt')) as fh:
         voluto = {x for x in fh.read().split('\n') if x}
     arch = cfg.archivio

@@ -529,7 +529,9 @@ function descrivi(v,t0){
   return {txt:txt+k+' · '+t,pct};
  }
  const k=T(' (passo {k} di {n})',{k:v.passo||1,n:3});
- if(f==='pack'){txt=T('Preparo il pack')+(v.sistema?T(': sistema «{s}» ({f} di {n})',{s:v.sistema,f:num((v.fatti||0)+1),n:num(v.totale)}):'');pct=v.totale?(v.fatti||0)/v.totale*100:null}
+ if(f==='pack'&&v.sub==='scrivo'){txt=T('Preparo il pack: scrivo lista e report ({n} file)',{n:num(v.file)});pct=null}
+ else if(f==='pack'&&v.sub==='servizio'){txt=T('Preparo il pack: cartella di servizio «{s}» ({f} di {n}), {m} file',{s:v.sistema,f:num((v.fatti||0)+1),n:num(v.totale),m:num(v.file)});pct=null}
+ else if(f==='pack'){txt=T('Preparo il pack')+(v.sistema?T(': sistema «{s}» ({f} di {n})',{s:v.sistema,f:num((v.fatti||0)+1),n:num(v.totale)}):'');pct=v.totale?(v.fatti||0)/v.totale*100:null}
  else if(f==='scheda')txt=T('Leggo i file della scheda: {n} trovati',{n:num(v.contati)});
  else if(f==='confronto'){txt=T('Confronto la scheda con il pack: {f} di {n} file',{f:num(v.fatti),n:num(v.totale)});pct=v.totale?(v.fatti||0)/v.totale*100:null}
  else txt=T('Avvio il calcolo');
