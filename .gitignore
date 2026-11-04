@@ -10,3 +10,6 @@ __pycache__/
 /demo/packs/
 credenziali*
 *.log
+/dist/
+/build/
+server.log

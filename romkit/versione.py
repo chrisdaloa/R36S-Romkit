@@ -1,8 +1,9 @@
 """Versione del programma: numero di rilascio e, in una copia git, il commit in uso."""
-import os, subprocess, time, glob
+import os, sys, subprocess, time, glob
 
 NUMERO = '0.2.0'
-RADICE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CONGELATO = bool(getattr(sys, 'frozen', False))      # True nell'eseguibile autonomo (PyInstaller)
+RADICE = os.path.dirname(sys.executable) if CONGELATO else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def _git(*a):

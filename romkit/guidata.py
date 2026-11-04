@@ -203,11 +203,12 @@ def riavvia(argv):
     """Rilancia il processo con gli stessi argomenti, dopo una breve pausa per chiudere la risposta."""
     def go():
         time.sleep(0.8)
-        radice = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        os.environ['PYTHONPATH'] = radice + os.pathsep + os.environ.get('PYTHONPATH', '')
+        if not getattr(sys, 'frozen', False):
+            radice = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            os.environ['PYTHONPATH'] = radice + os.pathsep + os.environ.get('PYTHONPATH', '')
         if os.name == 'nt':                                    # niente exec reale: nuovo processo, poi esco
-            subprocess.Popen([sys.executable, '-c', 'import time,subprocess,sys;time.sleep(1.5);subprocess.call(sys.argv[1:])',
-                              sys.executable] + argv)
+            ritardo = ['-c', 'import time,subprocess,sys;time.sleep(1.5);subprocess.call(sys.argv[1:])', sys.executable]
+            subprocess.Popen([sys.executable] + ([] if getattr(sys, 'frozen', False) else ritardo) + argv)
             os._exit(0)
         os.execv(sys.executable, [sys.executable] + argv)
     threading.Thread(target=go, daemon=True).start()

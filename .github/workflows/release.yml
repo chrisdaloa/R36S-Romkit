@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest]      # macOS: aggiungere macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pyinstaller pillow
+      - name: Il tag deve coincidere con la versione del programma
+        shell: bash
+        run: |
+          v=$(python -c "from romkit.versione import NUMERO; print(NUMERO)")
+          [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "Tag ${GITHUB_REF_NAME} diverso da versione.py ($v)"; exit 1; }
+      - run: python scripts/build.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pacchetto-${{ matrix.os }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: pacchetti
+          merge-multiple: true
+      - name: Note di rilascio dal CHANGELOG
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v v="$v" '$0 ~ "^## "v" " {f=1; next} /^## / {f=0} f' CHANGELOG.md > note.md
+          [ -s note.md ] || { echo "Nessuna voce $v in CHANGELOG.md"; exit 1; }
+      - name: Pubblica
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" pacchetti/* --title "R36S-Romkit ${GITHUB_REF_NAME#v}" --notes-file note.md

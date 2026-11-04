@@ -17,11 +17,12 @@ def _cfg(a):
 
 def main(argv=None):
     p = argparse.ArgumentParser(prog='romkit', description='Catalogo web e pack per schede SD di console portatili.')
-    p.add_argument('--config', default='config.toml')
+    p.add_argument('--config', default=os.path.join(versione.RADICE, 'config.toml') if versione.CONGELATO else 'config.toml')
     p.add_argument('--version', action='version', version='romkit ' + versione.testo())
-    sub = p.add_subparsers(dest='cmd', required=True)
+    sub = p.add_subparsers(dest='cmd', required=not versione.CONGELATO)
     sub.add_parser('catalogo', help='genera i dati del catalogo dall\'archivio')
     sv = sub.add_parser('serve', help='avvia il server del catalogo')
+    sv.add_argument('--apri', action='store_true', help='apre il browser all\'avvio (sempre attivo nell\'eseguibile autonomo)')
     sv.add_argument('--setup', action='store_true', help='riapre la configurazione guidata anche se config.toml esiste')
     sv.add_argument('--porta', type=int, default=8765, help='porta della configurazione guidata (predefinita 8765)')
     sv.add_argument('--archivio', help='usa questa cartella al posto di [archivio].percorso')
@@ -37,6 +38,8 @@ def main(argv=None):
     pp = ps.add_parser('prepara'); pp.add_argument('nome'); pp.add_argument('cartella')
     pc = ps.add_parser('copia'); pc.add_argument('cartella'); pc.add_argument('--applica', action='store_true')
     pc.add_argument('--destinazione')
+    if versione.CONGELATO and not (argv if argv is not None else sys.argv[1:]):
+        argv = ['serve']                                       # doppio clic sull'eseguibile: avvia il catalogo
     a = p.parse_args(argv)
 
     if a.cmd == 'demo':
@@ -44,14 +47,14 @@ def main(argv=None):
         return demo.crea(a.cartella)
     if a.cmd == 'serve' and (a.setup or not os.path.exists(a.config)):
         from . import server
-        return server.serve_setup(os.path.abspath(a.config), porta=a.porta)
+        return server.serve_setup(os.path.abspath(a.config), porta=a.porta, apri=a.apri or versione.CONGELATO)
     cfg = _cfg(a)
     if a.cmd == 'catalogo':
         from . import catalogo
         catalogo.genera(cfg)
     elif a.cmd == 'serve':
         from . import server
-        server.serve(cfg)
+        server.serve(cfg, apri=a.apri or versione.CONGELATO)
     elif a.cmd == 'sd':
         from . import sd
         dove = a.dove or cfg['sd']['destinazione']

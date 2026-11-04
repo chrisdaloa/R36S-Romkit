@@ -1,10 +1,10 @@
 """Server locale del catalogo: pagina web, dati generati, pack e (solo se abilitato) ROM in sola lettura."""
-import os, json, ipaddress, posixpath, tempfile, threading, time, uuid
+import os, json, webbrowser, ipaddress, posixpath, tempfile, threading, time, uuid
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit, parse_qs
 from . import sd, sorgenti, sync, packs, guidata, versione
 
-WEB = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'web')
+WEB = os.path.join(versione.RADICE, 'web')
 MAX_PACKS = 20 * 1024 * 1024
 DATI = ('data.js', 'data.json')
 
@@ -73,7 +73,7 @@ def _setup_api(h, metodo, file):
             r = guidata.demo(file)
         elif metodo == 'POST' and azione == 'fine':
             r = {'ok': True}
-            guidata.riavvia(['-m', 'romkit.cli', '--config', file, 'serve'])
+            guidata.riavvia(['--config', file, 'serve'] if versione.CONGELATO else ['-m', 'romkit.cli', '--config', file, 'serve'])
         else:
             return h.send_error(404)
     except (ValueError, KeyError, TypeError, OSError) as e:
@@ -121,8 +121,15 @@ def crea_setup(file):
     return S
 
 
-def serve_setup(file, host='127.0.0.1', porta=8765):
+def _apri_browser(url):
+    """Apre la pagina nel browser predefinito, poco dopo l'avvio del server."""
+    threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+
+
+def serve_setup(file, host='127.0.0.1', porta=8765, apri=False):
     print(f'Prima configurazione: apri http://{host}:{porta}/ nel browser  (Ctrl+C per fermare)')
+    if apri:
+        _apri_browser(f'http://{host}:{porta}/')
     ThreadingHTTPServer((host, porta), crea_setup(file)).serve_forever()
 
 
@@ -356,10 +363,12 @@ def crea(cfg):
     return H
 
 
-def serve(cfg):
+def serve(cfg, apri=False):
     host, porta = cfg['server']['host'], cfg['server']['porta']
     os.makedirs(cfg.pack, exist_ok=True)
     print(f'Catalogo su http://{host}:{porta}/index.html  (Ctrl+C per fermare)')
     if host not in ('127.0.0.1', 'localhost', '::1'):
         print('ATTENZIONE: server raggiungibile dalla rete, senza autenticazione.')
+    if apri:
+        _apri_browser(f'http://127.0.0.1:{porta}/index.html')
     ThreadingHTTPServer((host, porta), crea(cfg)).serve_forever()
