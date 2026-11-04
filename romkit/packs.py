@@ -1,5 +1,5 @@
 """Preparazione di un pack: gamelist ridotti, elenco di copia e report. Non scrive mai nell'archivio."""
-import os, re, json, fnmatch, shutil, subprocess
+import os, re, json, fnmatch, shutil, subprocess, hashlib
 import xml.etree.ElementTree as ET
 from .titoli import senza_numero
 
@@ -39,8 +39,44 @@ def carica_packs(cfg):
         return json.load(fh)
 
 
-def prepara(cfg, nome, cartella, libero=None, avanza=None):
-    """Crea in <pack>/<cartella>: gamelist/, lista-copia.txt, report.txt. Restituisce il riepilogo."""
+def _chiave(cfg, pack):
+    """Impronta di tutto cio' da cui dipende la preparazione: scelta del pack, impostazioni, date di gamelist e cartelle."""
+    arch = cfg.archivio
+    def data(p):
+        try:
+            st = os.stat(p)
+            return [st.st_mtime_ns, st.st_size]
+        except OSError:
+            return None
+    sistemi = sorted({i.split('/', 1)[0] for i in pack['ids']})
+    dip = {
+        'v': 1, 'ids': sorted(pack['ids']), 'escludi': cfg['pack']['escludi'], 'servizio': cfg['pack']['servizio'],
+        'sottocart': cfg['catalogo']['sottocartelle'], 'solo': cfg['catalogo']['solo_estensione'],
+        'sis': {s: [data(os.path.join(arch, s)), data(os.path.join(arch, s, 'gamelist.xml'))] for s in sistemi},
+        'srv': {d: [data(os.path.join(arch, d)), data(os.path.join(arch, d, 'gamelist.xml'))] for d in cfg['pack']['servizio']},
+    }
+    return hashlib.sha1(json.dumps(dip, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def prepara(cfg, nome, cartella, libero=None, avanza=None, cache=False):
+    """Crea in <pack>/<cartella>: gamelist/, lista-copia.txt, report.txt. Restituisce il riepilogo.
+
+    Con `cache` riusa l'esito precedente se pack, impostazioni e date di gamelist e cartelle non sono cambiati."""
+    dest = os.path.join(cfg.pack, cartella)
+    chiave = _chiave(cfg, carica_packs(cfg)[nome]) if cache else None
+    fc = os.path.join(dest, '.cache.json')
+    if cache:
+        try:
+            with open(fc) as fh:
+                c = json.load(fh)
+            if c.get('chiave') == chiave and all(os.path.exists(os.path.join(dest, x)) for x in ('lista-copia.txt', 'report.txt', 'gamelist')):
+                r = c['esito']
+                sd = cfg['sd']['destinazione']
+                r['libero'] = shutil.disk_usage(sd).free if sd and os.path.isdir(sd) else None
+                r['cache'] = True
+                return r
+        except (OSError, ValueError, KeyError):
+            pass
     arch, escludi = cfg.archivio, cfg['pack']['escludi']
     sottocart = cfg['catalogo']['sottocartelle']
     solo_gamelist = {s for s, e in cfg['catalogo']['solo_estensione'].items() if s in cfg['pack']['servizio']}
@@ -50,11 +86,10 @@ def prepara(cfg, nome, cartella, libero=None, avanza=None):
         s, f = i.split('/', 1)
         per_sis.setdefault(s, []).append(f)
 
-    dest = os.path.join(cfg.pack, cartella)
     os.makedirs(os.path.join(dest, 'gamelist'), exist_ok=True)
     lista, anomalie, note = set(), [], []
     tot = {'rom': 0, 'media': 0, 'servizio': 0}
-    tab = {}
+    tab, dims = {}, {}
 
     def dim(rel):
         try:
@@ -70,6 +105,7 @@ def prepara(cfg, nome, cartella, libero=None, avanza=None):
             anomalie.append(f'MANCANTE  {rel}')
             return
         lista.add(rel)
+        dims[rel] = d
         tot[tipo] += d
         tab[s][tipo] += d
         b = os.path.basename(rel)
@@ -155,6 +191,7 @@ def prepara(cfg, nome, cartella, libero=None, avanza=None):
                 if avanza and nf % 100 == 0:
                     avanza(d, kd, len(cart), sub='servizio', file=nf)
                 sz = os.path.getsize(os.path.join(r, x))
+                dims[rel] = sz
                 tot['servizio'] += sz
                 tab[d]['servizio'] += sz
                 if ILLEGALI.search(x):
@@ -191,7 +228,14 @@ def prepara(cfg, nome, cartella, libero=None, avanza=None):
         w(f'Anomalie ({len(anomalie)}):')
         for a in anomalie[:300]:
             w('  ' + a)
-    return {'totale': totale, 'file': len(lista), 'anomalie': anomalie, 'libero': libero, 'dest': dest}
+    esito = {'totale': totale, 'file': len(lista), 'anomalie': anomalie, 'libero': libero, 'dest': dest, 'dimensioni': dims}
+    if cache:
+        try:
+            with open(fc, 'w') as fh:
+                json.dump({'chiave': chiave, 'esito': esito}, fh)
+        except OSError:
+            pass
+    return esito
 
 
 def copia(cfg, cartella, applica=False, destinazione=None):

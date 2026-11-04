@@ -44,10 +44,10 @@ def piano(cfg, dove, pack, cartella='_anteprima', stato=None):
     salvataggi, cartelle di servizio, sistemi fuori dal pack e file estranei all'archivio non vengono mai proposti."""
     stato = stato if stato is not None else {}
     stato.update(fase='pack', passo=1)
-    r = packs.prepara(cfg, pack, cartella, avanza=lambda s, k, n, **x: stato.update(sistema=s, fatti=k, totale=n, **x))
+    r = packs.prepara(cfg, pack, cartella, cache=True, avanza=lambda s, k, n, **x: stato.update(sistema=s, fatti=k, totale=n, **x))
     with open(os.path.join(r['dest'], 'lista-copia.txt')) as fh:
         voluto = {x for x in fh.read().split('\n') if x}
-    arch = cfg.archivio
+    arch, dims = cfg.archivio, r.get('dimensioni') or {}
     sistemi = {i.split('/', 1)[0] for i in packs.carica_packs(cfg)[pack]['ids']} - set(cfg['sync']['non_toccare'])
     ignora = set(cfg['catalogo']['ignora']) | set(cfg['pack']['servizio'])
     stato.update(fase='scheda', passo=2, contati=0)
@@ -58,10 +58,12 @@ def piano(cfg, dove, pack, cartella='_anteprima', stato=None):
     for k, p in enumerate(sorted(voluto)):
         if k % 500 == 0:
             stato['fatti'] = k
-        try:
-            n = os.path.getsize(os.path.join(arch, p))
-        except OSError:
-            continue
+        n = dims.get(p)
+        if n is None:
+            try:
+                n = os.path.getsize(os.path.join(arch, p))
+            except OSError:
+                continue
         if p.split('/', 1)[0] in ignora:
             continue                                   # file di servizio: non fanno parte del confronto
         if p not in sd:
