@@ -107,14 +107,14 @@ async function vai(p){
   ovCorrente=d.percorso;$('ovp').textContent=d.percorso;
   const v=[];
   if(d.sopra)v.push(`<li><button type="button" data-p="${esc(d.sopra)}">${T('‹ Cartella superiore')}</button></li>`);
-  d.figli.forEach(f=>v.push(`<li><button type="button" data-p="${esc(d.percorso.replace(/\/$/,'')+'/'+f)}">${esc(f)}</button></li>`));
+  d.figli.forEach((f,i)=>v.push(`<li><button type="button" data-p="${esc(d.percorsi[i])}">${esc(f)}</button></li>`));
   if(!d.figli.length)v.push('<li style="padding:10px;color:var(--mu)">'+T('Nessuna sottocartella.')+'</li>');
   $('ovl').innerHTML=v.join('');
  }catch(e){if(p)return vai('');$('ovl').innerHTML='<li style="padding:10px">'+esc(e.message)+'</li>'}
 }
 $('ovl').onclick=e=>{const b=e.target.closest('button[data-p]');if(b)vai(b.dataset.p)};
 $('ova').onclick=()=>{$('ov').hidden=true};
-$('ovs').onclick=()=>{ovInput.value=ovCorrente;$('ov').hidden=true;ovInput.dispatchEvent(new Event('input'))};
+$('ovs').onclick=()=>{if(ovCorrente==='Computer')return;ovInput.value=ovCorrente;$('ov').hidden=true;ovInput.dispatchEvent(new Event('input'))};
 
 function campo(id,etichetta,val,aiuto){
  return `<label class="l" for="${id}">${etichetta}</label><div class="riga"><input type="text" id="${id}" value="${esc(val)}" spellcheck="false"><button class="btn" type="button" data-sfoglia="${id}">${T('Sfoglia')}</button></div>${aiuto?`<p class="nota">${aiuto}</p>`:''}`;

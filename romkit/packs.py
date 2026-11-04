@@ -161,8 +161,7 @@ def prepara(cfg, nome, cartella, libero=None, avanza=None):
     totale = sum(tot.values())
     sd = cfg['sd']['destinazione']
     if libero is None and sd and os.path.isdir(sd):
-        st = os.statvfs(sd)
-        libero = st.f_bavail * st.f_frsize
+        libero = shutil.disk_usage(sd).free
     gb = lambda n: f'{n / 1e9:7.2f} GB'
     with open(os.path.join(dest, 'report.txt'), 'w') as fh:
         w = lambda x='': fh.write(x + '\n')

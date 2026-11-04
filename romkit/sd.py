@@ -1,5 +1,5 @@
 """Inventario e confronto di una SD (montata o via SSH) con l'archivio. Solo lettura: non scrive mai."""
-import os, re, subprocess
+import os, re, shutil, subprocess
 from .catalogo import MEDIA, NOT_GAME
 
 NON_GIOCO = re.compile(r'\.(state\d*|torrent|sqlite|auto|a1\.bin|b1\.bin)$')
@@ -85,8 +85,8 @@ def analizza(cfg, dove, pack=None):
     sd = inventario(cfg, dove)
     out = {'dove': dove, 'riepilogo': {s: {'n': len(g), 'b': sum(g.values())} for s, g in sd.items()}}
     if os.path.isdir(dove):
-        st = os.statvfs(dove)
-        out['spazio'] = {'usati': (st.f_blocks - st.f_bfree) * st.f_frsize, 'liberi': st.f_bavail * st.f_frsize}
+        du = shutil.disk_usage(dove)
+        out['spazio'] = {'usati': du.used, 'liberi': du.free}
     elif ':' in dove:
         sp = _spazio_ssh(dove)
         if sp:

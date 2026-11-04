@@ -1,7 +1,7 @@
 """Configurazione guidata: scansione dell'archivio, scrittura di config.toml e primo catalogo.
 
 Le funzioni qui sono chiamate dal server, che le espone solo a chi scrive da questo PC."""
-import os, re, sys, threading, time
+import subprocess, os, re, sys, threading, time
 from . import config as C, sorgenti, catalogo
 
 SISTEMI_GIOCA = ['nes', 'famicom', 'snes', 'sfc', 'gb', 'gbc', 'gba', 'megadrive', 'genesis', 'mastersystem', 'sg-1000', 'gamegear', 'pcengine', 'supergrafx', 'turbografx', 'ngp', 'ngpc', 'atari2600', 'atari5200', 'atari7800', 'atarilynx', 'virtualboy', 'wonderswan', 'wonderswancolor', 'coleco', 'sega32x']
@@ -15,8 +15,19 @@ def _tmp_cfg(archivio=''):
     return c
 
 
+UNITA = '::unita'              # voce fittizia "sopra" dei dischi, solo su Windows
+
+
+def _unita():
+    import string
+    return [f'{l}:\\' for l in string.ascii_uppercase if os.path.isdir(f'{l}:\\')]
+
+
 def cartelle(p):
-    """Sottocartelle di p (solo i nomi), per il navigatore."""
+    """Sottocartelle di p (nomi e percorsi completi), per il navigatore."""
+    if os.name == 'nt' and p == UNITA:
+        u = _unita()
+        return {'percorso': 'Computer', 'sopra': None, 'figli': u, 'percorsi': u}
     p = os.path.abspath(os.path.expanduser(p or '~'))
     if not os.path.isdir(p):
         raise ValueError('Cartella non trovata')
@@ -24,7 +35,10 @@ def cartelle(p):
         figli = sorted(x for x in os.listdir(p) if not x.startswith('.') and os.path.isdir(os.path.join(p, x)))
     except OSError:
         raise ValueError('Cartella non leggibile')
-    return {'percorso': p, 'sopra': os.path.dirname(p) if p != '/' else None, 'figli': figli}
+    sopra = os.path.dirname(p)
+    if sopra == p:
+        sopra = UNITA if os.name == 'nt' else None
+    return {'percorso': p, 'sopra': sopra, 'figli': figli, 'percorsi': [os.path.join(p, x) for x in figli]}
 
 
 def scansiona(p):
@@ -191,5 +205,9 @@ def riavvia(argv):
         time.sleep(0.8)
         radice = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         os.environ['PYTHONPATH'] = radice + os.pathsep + os.environ.get('PYTHONPATH', '')
+        if os.name == 'nt':                                    # niente exec reale: nuovo processo, poi esco
+            subprocess.Popen([sys.executable, '-c', 'import time,subprocess,sys;time.sleep(1.5);subprocess.call(sys.argv[1:])',
+                              sys.executable] + argv)
+            os._exit(0)
         os.execv(sys.executable, [sys.executable] + argv)
     threading.Thread(target=go, daemon=True).start()

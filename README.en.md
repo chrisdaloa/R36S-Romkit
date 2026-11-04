@@ -37,4 +37,4 @@ Removed games are moved to `_rimossi/<date>/` on the card, never deleted; saves,
 ## Security
 The server listens on `127.0.0.1` only by default and has no authentication. Never expose it to the Internet. «Play» serves ROMs: keep it off outside a trusted home network.
 
-Requires Python ≥ 3.11, Pillow, `rsync`. Linux/macOS for now. MIT licence.
+Requires Python ≥ 3.11, Pillow, `rsync`. Linux/macOS; on Windows (untested) catalogue, server and packs work, but not copy and sync. MIT licence.

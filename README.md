@@ -44,6 +44,6 @@ Il server ascolta di default solo su `127.0.0.1` e non ha autenticazione. Non es
 «Gioca» serve le ROM: tienilo spento salvo che in rete domestica.
 
 ## Requisiti
-Python ≥ 3.11, Pillow, `rsync` (per la copia). Per ora Linux/macOS.
+Python ≥ 3.11, Pillow, `rsync` (per la copia). Linux/macOS; su Windows (non provato) catalogo, server e pack, ma non copia e sincronizzazione.
 
 Licenza MIT.
