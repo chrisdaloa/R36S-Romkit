@@ -2,6 +2,9 @@
 
 Il numero di versione sta in `romkit/versione.py` (`NUMERO`). Si vede nella pagina, accanto al nome, e con `romkit --version`.
 
+## 0.3.1 — 2026-11-04
+- Versione di prova per verificare l'aggiornamento dall'app (nessuna modifica funzionale).
+
 ## 0.3.0 — 2026-11-04
 - Eseguibile autonomo per Linux e Windows (macOS in preparazione): si scarica, si decomprime e si avvia con un doppio clic.
 - Aggiornamento dall'app: la versione in alto mostra le novità e, dal PC che ospita il catalogo, scarica, verifica e installa la release.
