@@ -2,6 +2,13 @@
 // in italiano e lo traduce con EN in inglese. {nome} nei testi viene sostituito dai valori passati.
 (function(){
  const EN={
+  // smontaggio
+  'Smonta la scheda':'Unmount the card',
+  'Scrive i dati in sospeso, smonta le partizioni della scheda e la spegne: poi puoi estrarla':'Writes pending data, unmounts the card partitions and powers it off: then you can remove it',
+  'Smonto la scheda…':'Unmounting the card…',
+  'Scheda smontata e spenta: puoi estrarla.':'Card unmounted and powered off: you can remove it.',
+  'Scheda smontata: puoi estrarla.':'Card unmounted: you can remove it.',
+  'Smontaggio non riuscito':'Unmount failed',
   // cestino della scheda
   'Cestino della scheda':'Card bin',
   'I giochi tolti da una sincronizzazione sono qui, non sono stati cancellati. Puoi rimetterli al loro posto oppure cancellarli per liberare spazio.':'Games removed by a sync are here, they have not been deleted. You can put them back or delete them to free space.',

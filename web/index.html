@@ -243,6 +243,8 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
     <select id="sds" aria-label="SD o console" hidden></select>
     <div class="spz" id="spz" hidden><div class="prog"><i></i></div><p class="note" style="margin:0" id="spt"></p><p class="note" style="margin:4px 0 0" id="spp"></p></div>
     <button id="ctb" class="btn" type="button" hidden>Cestino della scheda</button>
+    <button id="smb" class="btn" type="button" hidden title="Scrive i dati in sospeso, smonta le partizioni della scheda e la spegne: poi puoi estrarla">Smonta la scheda</button>
+    <p class="note" id="smn" style="margin:0" hidden></p>
     <button id="pc" class="btn" type="button">Controlla rispetto al pack</button>
     <button id="sy" class="btn primary" type="button" title="Calcola cosa aggiungere e cosa togliere per allineare la scheda al pack. Non scrive nulla.">Sincronizza con il pack</button>
     <p class="note" style="margin:0">Allinea la scheda al pack scelto. Prima vedi cosa cambierebbe, poi decidi. <button id="gu" class="link" type="button">Come funziona</button></p>
@@ -501,6 +503,18 @@ function apriCestino(msg){
  $('ct').hidden=false}
 $('ctb').onclick=()=>apriCestino();$('ctx').onclick=()=>$('ct').hidden=true;
 
+// smontaggio sicuro della scheda (solo Linux, solo dal PC che ospita il catalogo)
+async function smonta(){
+ const n=$('sds').value,b=$('smb'),m=$('smn');if(!n)return;
+ b.disabled=true;m.hidden=false;m.textContent=T('Smonto la scheda…');
+ try{const x=await fetch('/api/sd/smonta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sorgente:n})});
+  if(!x.ok){const t=await x.text();const mm=t.match(/<p>Message: (.*?)\.?<\/p>/);throw new Error(mm?mm[1]:x.status)}
+  const j=await x.json();
+  m.textContent=j.spenta?T('Scheda smontata e spenta: puoi estrarla.'):T('Scheda smontata: puoi estrarla.')
+ }catch(e){m.textContent=T('Smontaggio non riuscito')+': '+e.message}
+ b.disabled=false;sorgenti(n)}
+$('smb').onclick=smonta;
+
 // controllo della SD (sola lettura): il server legge la sorgente scelta e la confronta con il pack attivo
 let salvate={};
 const STATO={collegata:' — collegata',assente:' — non collegata'};
@@ -511,7 +525,7 @@ async function sorgenti(sel){
   $('sds').replaceChildren();n.forEach(x=>{const o=document.createElement('option');o.value=x.nome;o.textContent=x.nome+T(STATO[x.stato]||'');$('sds').appendChild(o)});
   if(prec&&n.some(x=>x.nome===prec))$('sds').value=prec;
   else{const c=n.find(x=>x.stato==='collegata');if(c)$('sds').value=c.nome}
-  $('sdsec').hidden=false;leggiSpazio();leggiCestino();
+  $('sdsec').hidden=false;leggiSpazio();leggiCestino();{const c=n.find(x=>x.nome===$('sds').value);$('smb').hidden=!v.modificabile||!c||c.stato!=='collegata'||!!c.remota;if($('smb').hidden)$('smn').hidden=true}
   $('sds').hidden=$('pc').hidden=!n.length;$('sy').hidden=!n.length||!v.modificabile;$('sa').hidden=!v.modificabile;$('sx').hidden=$('sr').hidden=!v.modificabile||!(($('sds').value) in salvate)}catch(e){}
 }
 let agg=null,aggVer=null;

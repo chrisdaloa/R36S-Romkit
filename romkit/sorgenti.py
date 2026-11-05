@@ -1,6 +1,6 @@
 """Sorgenti SD: quelle del config.toml (percorso fisso o utente@host:/percorso) piu' le schede
 riconosciute per identita' del volume (UUID) e salvate in sorgenti.json accanto al config."""
-import os, json, re, subprocess, tempfile
+import os, sys, json, re, subprocess, tempfile
 
 RADICI = ('/media', '/run/media', '/mnt')
 MIN_SISTEMI = 5      # cartelle di sistema minime perche' una partizione senza firma sia proposta
@@ -21,7 +21,7 @@ def salvate(cfg):
 
 
 def _lsblk():
-    r = subprocess.run(['lsblk', '-J', '-b', '-o', 'NAME,TYPE,UUID,LABEL,FSTYPE,SIZE,MOUNTPOINTS'],
+    r = subprocess.run(['lsblk', '-J', '-b', '-o', 'NAME,PATH,TYPE,UUID,LABEL,FSTYPE,SIZE,MOUNTPOINTS,RM,HOTPLUG'],
                        capture_output=True, text=True, timeout=15)
     return json.loads(r.stdout or '{}')
 
@@ -136,3 +136,42 @@ def rinomina(cfg, vecchio, nuovo):
         raise ValueError('Nome gia\' in uso')
     d = {(nuovo if k == vecchio else k): v for k, v in d.items()}      # mantiene l'ordine
     _scrivi(cfg, d)
+
+
+def _vero(v):
+    return v in (True, 1, '1', 'true')
+
+
+def smonta(cfg, nome, dati=None, esegui=None):
+    """Smonta in sicurezza la scheda (solo Linux, solo disco rimovibile montato sotto /media, /run/media, /mnt).
+    Smonta tutte le sue partizioni (BOOT, EASYROMS...) e poi, se possibile, spegne il disco.
+    Solleva SystemExit con il motivo. Ritorna {'smontate': n, 'spenta': bool}."""
+    if not sys.platform.startswith('linux'):
+        raise SystemExit('Smontare dal programma funziona solo su Linux: usa «Rimuovi in sicurezza» del sistema')
+    dove = risolte(cfg).get(nome)
+    if not dove or ':' in dove and not os.path.isabs(dove):
+        raise SystemExit('Scheda non collegata a questo PC')
+    dove = os.path.realpath(dove)
+    esegui = esegui or (lambda cmd: subprocess.run(cmd, capture_output=True, text=True, timeout=60))
+    disco = part = None
+    for d in (dati if dati is not None else _lsblk()).get('blockdevices', []):
+        for c in d.get('children', []):
+            if dove in [os.path.realpath(m) for m in (c.get('mountpoints') or []) if m]:
+                disco, part = d, c
+    if not disco:
+        raise SystemExit('Non trovo il disco di questa scheda')
+    if not (_vero(disco.get('rm')) or _vero(disco.get('hotplug'))):
+        raise SystemExit('Non è un disco rimovibile: non lo smonto da qui')
+    montate = [(c.get('path') or '/dev/' + c['name'], m) for c in disco.get('children', []) for m in (c.get('mountpoints') or []) if m]
+    if any(not m.startswith(RADICI) for _, m in montate):
+        raise SystemExit('Il disco contiene partizioni di sistema montate: non lo smonto da qui')
+    esegui(['sync'])
+    n = 0
+    for dev in dict.fromkeys(d for d, _ in montate):
+        r = esegui(['udisksctl', 'unmount', '-b', dev])
+        if r.returncode:
+            msg = (r.stderr or r.stdout or '').strip()
+            raise SystemExit('Non riesco a smontare ' + dev + (': ' + msg[-200:] if msg else ' (qualcosa la sta usando?)'))
+        n += 1
+    r = esegui(['udisksctl', 'power-off', '-b', disco.get('path') or '/dev/' + disco['name']])
+    return {'smontate': n, 'spenta': r.returncode == 0}

@@ -62,6 +62,44 @@ class Fumo(unittest.TestCase):
             self.assertEqual(sync.cestino(t), [])
             self.assertTrue(os.path.isdir(os.path.join(t, '_rimossi/non-una-data')))
 
+    def test_smonta_scheda(self):
+        from types import SimpleNamespace as R
+        from romkit import sorgenti
+        with tempfile.TemporaryDirectory() as t:
+            lav = os.path.join(t, 'lav')
+            cli.main(['demo', lav])
+            cfg = config.carica(os.path.join(lav, 'config.toml'))
+            sdp = os.path.join(t, 'media', 'EASYROMS')
+            os.makedirs(sdp)
+            cfg['sd']['sorgenti']['SD'] = sdp
+            def disco(rm=True, extra=None):
+                ch = [{'name': 'sdx1', 'path': '/dev/sdx1', 'mountpoints': [None]},
+                      {'name': 'sdx3', 'path': '/dev/sdx3', 'mountpoints': [sdp]}] + (extra or [])
+                return {'blockdevices': [{'name': 'sdx', 'path': '/dev/sdx', 'rm': rm, 'hotplug': rm, 'children': ch}]}
+            chiamate = []
+            def ok(cmd):
+                chiamate.append(cmd)
+                return R(returncode=0, stdout='', stderr='')
+            cfg_ = cfg
+            self.addCleanup(setattr, sorgenti, 'RADICI', sorgenti.RADICI)
+            sorgenti.RADICI = (os.path.realpath(t),)
+            # sorgenti.smonta usa il percorso reale: la sorgente del config qui coincide con il mount
+            r = sorgenti.smonta(cfg_, 'SD', disco(), ok)
+            self.assertEqual(r, {'smontate': 1, 'spenta': True})
+            self.assertIn(['udisksctl', 'unmount', '-b', '/dev/sdx3'], chiamate)
+            self.assertEqual(chiamate[-1], ['udisksctl', 'power-off', '-b', '/dev/sdx'])
+            with self.assertRaises(SystemExit):                   # disco non rimovibile
+                sorgenti.smonta(cfg_, 'SD', disco(rm=False), ok)
+            with self.assertRaises(SystemExit):                   # partizione di sistema sullo stesso disco
+                sorgenti.smonta(cfg_, 'SD', disco(extra=[{'name': 'sdx2', 'path': '/dev/sdx2', 'mountpoints': ['/boot']}]), ok)
+            def occupato(cmd):
+                return R(returncode=1 if cmd[1:2] == ['unmount'] else 0, stdout='', stderr='target is busy')
+            with self.assertRaises(SystemExit) as e:
+                sorgenti.smonta(cfg_, 'SD', disco(), occupato)
+            self.assertIn('busy', str(e.exception))
+            with self.assertRaises(SystemExit):                   # sorgente sconosciuta
+                sorgenti.smonta(cfg_, 'altra', disco(), ok)
+
     def test_sorgenti_per_uuid(self):
         from romkit import sorgenti
         with tempfile.TemporaryDirectory() as t:

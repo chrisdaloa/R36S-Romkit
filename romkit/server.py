@@ -1,5 +1,5 @@
 """Server locale del catalogo: pagina web, dati generati, pack e (solo se abilitato) ROM in sola lettura."""
-import os, json, webbrowser, ipaddress, posixpath, tempfile, threading, time, uuid
+import os, json, subprocess, webbrowser, ipaddress, posixpath, tempfile, threading, time, uuid
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit, parse_qs
 from . import sd, sorgenti, sync, packs, guidata, versione, aggiorna
@@ -307,6 +307,27 @@ def crea(cfg):
                 return self.send_error(502, str(e)[:200] or 'Operazione sul cestino non riuscita')
             self._json(json.dumps(r).encode())
 
+        def _sd_smonta(self):
+            if not self._origine_ok():
+                return self.send_error(403)
+            n = int(self.headers.get('Content-Length') or 0)
+            if not 0 < n <= 4096:
+                return self.send_error(413)
+            try:
+                nome = json.loads(self.rfile.read(n))['sorgente']
+                if not isinstance(nome, str):
+                    raise TypeError
+            except (ValueError, KeyError, TypeError):
+                return self.send_error(400)
+            with LAVORI_LOCK:
+                if any(x['stato'] == 'in corso' and x['chiave'][0] == nome for x in LAVORI.values()):
+                    return self.send_error(409, 'Un\'altra operazione su questa scheda e\' in corso')
+            try:
+                r = sorgenti.smonta(cfg, nome)
+            except (OSError, subprocess.SubprocessError, SystemExit) as e:
+                return self.send_error(502, str(e)[:200] or 'Smontaggio non riuscito')
+            self._json(json.dumps(r).encode())
+
         def do_GET(self):
             ru = urlsplit(self.path)
             if ru.path.startswith('/api/setup/'):
@@ -413,6 +434,8 @@ def crea(cfg):
                 return self._sync_applica()
             if urlsplit(self.path).path == '/api/sd/cestino':
                 return self._cestino_azione()
+            if urlsplit(self.path).path == '/api/sd/smonta':
+                return self._sd_smonta()
             self._sorgente('aggiungi')
 
         def do_DELETE(self):

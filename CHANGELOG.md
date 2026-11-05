@@ -6,6 +6,7 @@ Il numero di versione sta in `romkit/versione.py` (`NUMERO`). Si vede nella pagi
 - Cestino della scheda: dalla scheda collegata si vedono le sincronizzazioni con i giochi tolti (`_rimossi`), con numero di file, dimensione e sistemi.
 - «Rimetti a posto» rimette i file dove stavano, senza sovrascrivere quelli già presenti sulla scheda; «Cancella definitivamente» libera lo spazio (con doppia conferma).
 - Funziona solo su schede montate su questo PC e solo dal PC che ospita il catalogo.
+- «Smonta la scheda» (solo Linux): scrive i dati in sospeso, smonta tutte le partizioni della scheda e la spegne, così puoi estrarla. Rifiuta i dischi non rimovibili e quelli con partizioni di sistema.
 
 ## 0.3.1 — 2026-11-04
 - Versione di prova per verificare l'aggiornamento dall'app (nessuna modifica funzionale).
