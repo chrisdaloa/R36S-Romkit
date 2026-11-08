@@ -108,7 +108,7 @@
   'Scegli e applica':'Choose and apply','Puoi escludere interi sistemi, oppure solo le aggiunte o solo le rimozioni. «Applica le modifiche» chiede una seconda conferma prima di scrivere.':'You can exclude whole systems, or only the additions or only the removals. «Apply the changes» asks for a second confirmation before writing.',
   'Controlla':'Check','Durante la copia vedi avanzamento, velocità e tempo residuo. A fine lavoro rifai la sincronizzazione: deve dire che la scheda è allineata.':'During the copy you see progress, speed and time left. Afterwards run the sync again: it should say the card is aligned.',
   'Niente viene cancellato: i giochi tolti vengono spostati in «_rimossi/data» sulla scheda e puoi rimetterli al loro posto.':'Nothing is deleted: removed games are moved to «_rimossi/date» on the card and you can put them back.',
-  'Salvataggi, impostazioni, i Ports e i file di servizio non vengono toccati.':'Saves, settings, Ports and service files are never touched.',
+  'Salvataggi, impostazioni e i Ports non vengono toccati. Bios, temi e altri file di servizio si aggiungono solo se mancano, mai sovrascritti.':'Saves, settings and Ports are never touched. BIOS, themes and other service files are only added if missing, never overwritten.',
   'Se le rimozioni superano il 20% della scheda ti viene chiesta una conferma in più.':'If removals exceed 20% of the card you are asked for an extra confirmation.',
   'Le modifiche si fanno solo dal PC su cui gira il programma; dalla rete si può solo consultare.':'Changes can only be made from the PC running the program; from the network you can only browse.',
   // errori del server

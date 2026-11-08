@@ -655,7 +655,7 @@ const GUIDA=[['Scegli il pack','In alto nel pannello scegli il pack che la sched
 ['Scegli e applica','Puoi escludere interi sistemi, oppure solo le aggiunte o solo le rimozioni. «Applica le modifiche» chiede una seconda conferma prima di scrivere.'],
 ['Controlla','Durante la copia vedi avanzamento, velocità e tempo residuo. A fine lavoro rifai la sincronizzazione: deve dire che la scheda è allineata.']];
 const GARANZIE=['Niente viene cancellato: i giochi tolti vengono spostati in «_rimossi/data» sulla scheda e puoi rimetterli al loro posto.',
-'Salvataggi, impostazioni, i Ports e i file di servizio non vengono toccati.',
+'Salvataggi, impostazioni e i Ports non vengono toccati. Bios, temi e altri file di servizio si aggiungono solo se mancano, mai sovrascritti.',
 'Se le rimozioni superano il 20% della scheda ti viene chiesta una conferma in più.',
 'Le modifiche si fanno solo dal PC su cui gira il programma; dalla rete si può solo consultare.'];
 $('gu').onclick=()=>{const rt=$('rt');rt.replaceChildren();const h=document.createElement('h2');h.textContent=T('Come sincronizzare una scheda');rt.appendChild(h);

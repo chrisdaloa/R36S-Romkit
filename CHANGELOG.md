@@ -7,6 +7,7 @@ Il numero di versione sta in `romkit/versione.py` (`NUMERO`). Si vede nella pagi
 - «Rimetti a posto» rimette i file dove stavano, senza sovrascrivere quelli già presenti sulla scheda; «Cancella definitivamente» libera lo spazio (con doppia conferma).
 - Funziona solo su schede montate su questo PC e solo dal PC che ospita il catalogo.
 - «Smonta la scheda» (solo Linux): scrive i dati in sospeso, smonta tutte le partizioni della scheda e la spegne, così puoi estrarla. Rifiuta i dischi non rimovibili e quelli con partizioni di sistema.
+- Sincronizzazione: le cartelle di servizio (`bios`, temi, `bezels`...) ora si aggiungono se mancano sulla scheda, ad esempio su una scheda vuota. Quelle già presenti non si aggiornano né si toccano mai.
 
 ## 0.3.1 — 2026-11-04
 - Versione di prova per verificare l'aggiornamento dall'app (nessuna modifica funzionale).

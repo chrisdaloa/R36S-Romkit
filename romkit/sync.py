@@ -11,7 +11,8 @@ def _remoto(dove):
 
 
 def _file_sd(dove, escludi, ignora, stato=None):
-    """{percorso relativo: dimensione} dei file nelle cartelle dei sistemi della SD."""
+    """({percorso relativo: dimensione} dei file nelle cartelle dei sistemi della SD, insieme dei percorsi
+    presenti nelle cartelle ignorate: servono per sapere quali file di servizio mancano)."""
     out = {}
     if _remoto(dove):
         host, _, path = dove.partition(':')
@@ -33,15 +34,17 @@ def _file_sd(dove, escludi, ignora, stato=None):
                     out[os.path.relpath(p, dove)] = os.path.getsize(p)
                 if stato is not None:
                     stato['contati'] = len(out)
-    return {p: n for p, n in out.items()
-            if p.split('/', 1)[0] not in ignora and not any(fnmatch.fnmatch(os.path.basename(p), e) for e in escludi)}
+    return ({p: n for p, n in out.items()
+             if p.split('/', 1)[0] not in ignora and not any(fnmatch.fnmatch(os.path.basename(p), e) for e in escludi)},
+            {p for p in out if p.split('/', 1)[0] in ignora})
 
 
 def piano(cfg, dove, pack, cartella='_anteprima', stato=None):
     """Confronta file per file la SD con la lista di copia del pack.
 
     Si toglie solo cio' che sta in un sistema del pack, esiste anche nell'archivio con lo stesso percorso e non e' nel pack:
-    salvataggi, cartelle di servizio, sistemi fuori dal pack e file estranei all'archivio non vengono mai proposti."""
+    salvataggi, sistemi fuori dal pack e file estranei all'archivio non vengono mai proposti. Le cartelle di servizio
+    (bios, temi...) si aggiungono solo se mancano: quelle gia' presenti non si aggiornano ne' si toccano."""
     stato = stato if stato is not None else {}
     stato.update(fase='pack', passo=1)
     r = packs.prepara(cfg, pack, cartella, cache=True, avanza=lambda s, k, n, **x: stato.update(sistema=s, fatti=k, totale=n, **x))
@@ -51,7 +54,8 @@ def piano(cfg, dove, pack, cartella='_anteprima', stato=None):
     sistemi = {i.split('/', 1)[0] for i in packs.carica_packs(cfg)[pack]['ids']} - set(cfg['sync']['non_toccare'])
     ignora = set(cfg['catalogo']['ignora']) | set(cfg['pack']['servizio'])
     stato.update(fase='scheda', passo=2, contati=0)
-    sd = _file_sd(dove, cfg['pack']['escludi'], ignora, stato)
+    sd, presenti = _file_sd(dove, cfg['pack']['escludi'], ignora, stato)
+    servizio = set(cfg['pack']['servizio']) - set(cfg['sync']['non_toccare'])
     stato.update(fase='confronto', passo=3, fatti=0, totale=len(voluto))
     sd_tutti = sd
     agg, upd, tog = [], [], []
@@ -64,8 +68,11 @@ def piano(cfg, dove, pack, cartella='_anteprima', stato=None):
                 n = os.path.getsize(os.path.join(arch, p))
             except OSError:
                 continue
-        if p.split('/', 1)[0] in ignora:
-            continue                                   # file di servizio: non fanno parte del confronto
+        cima = p.split('/', 1)[0]
+        if cima in ignora:
+            if cima in servizio and p not in presenti:
+                agg.append((p, n))                     # file di servizio: solo se mancano, mai aggiornati ne' tolti
+            continue
         if p not in sd:
             agg.append((p, n))
         elif sd[p] != n:

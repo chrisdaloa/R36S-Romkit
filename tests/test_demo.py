@@ -100,6 +100,29 @@ class Fumo(unittest.TestCase):
             with self.assertRaises(SystemExit):                   # sorgente sconosciuta
                 sorgenti.smonta(cfg_, 'altra', disco(), ok)
 
+    def test_sync_cartelle_di_servizio(self):
+        from romkit import sync
+        with tempfile.TemporaryDirectory() as t:
+            lav = os.path.join(t, 'lav')
+            cli.main(['demo', lav])
+            cf = os.path.join(lav, 'config.toml')
+            cli.main(['--config', cf, 'catalogo'])
+            cfg = config.carica(cf)
+            dati = json.load(open(os.path.join(cfg.dati, 'data.json')))
+            os.makedirs(cfg.pack)
+            json.dump({'P': {'cap': 1, 'ris': 0, 'ids': [f"{g['s']}/{g['f']}" for g in dati if g['s'] == 'nes']}},
+                      open(os.path.join(cfg.pack, 'packs.json'), 'w'))
+            sdp = os.path.join(t, 'sd')
+            os.makedirs(sdp)
+            p = sync.piano(cfg, sdp, 'P')                     # scheda vuota: il bios arriva
+            self.assertIn(('bios/finto.bin', 64), p['aggiungi'])
+            self.assertEqual(p['per_sistema']['bios']['aggiungi'], [1, 64])
+            os.makedirs(os.path.join(sdp, 'bios'))
+            open(os.path.join(sdp, 'bios', 'finto.bin'), 'wb').write(b'diverso e piu lungo')
+            open(os.path.join(sdp, 'bios', 'mio.bin'), 'wb').write(b'x')
+            p = sync.piano(cfg, sdp, 'P')                     # gia' presente (anche diverso): non si tocca, non si toglie
+            self.assertFalse([x for x in p['aggiungi'] + p['aggiorna'] + p['togli'] if x[0].startswith('bios/')])
+
     def test_sorgenti_per_uuid(self):
         from romkit import sorgenti
         with tempfile.TemporaryDirectory() as t:
