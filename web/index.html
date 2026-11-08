@@ -234,6 +234,8 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
     <button id="pa" class="btn primary" type="button">Aggiungi i risultati</button>
     <button id="pr" class="btn" type="button">Togli i risultati</button>
     <div class="row"><button id="ps" class="btn" type="button">Riepilogo</button><button id="pe" class="btn" type="button">Esporta elenco</button></div>
+    <button id="ph" class="btn" type="button">Esporta pagina HTML</button>
+    <button id="pj" class="btn" type="button">Esporta elenco sintetico</button>
    </div>
   </div>
   <h3 class="sez" id="sezs" hidden>La scheda <small id="sezn"></small></h3>
@@ -428,6 +430,46 @@ $('pe').onclick=()=>{
  const righe=D.filter(g=>sel.has(g.id)).map(g=>g.id).sort();
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([righe.join('\n')+'\n'],{type:'text/plain'}));
  a.download='pack-'+pack.replace(/[^\w.-]+/g,'_')+'.txt';a.click();URL.revokeObjectURL(a.href)};
+$('ph').onclick=async()=>{
+ const b=$('ph'),t0=b.textContent,gs=D.filter(g=>sel.has(g.id));
+ if(!gs.length)return;b.disabled=true;
+ try{
+  for(const s of new Set(gs.map(g=>g.s)))if(!(window.DESC&&window.DESC[s]))await new Promise(ok=>{const sc=document.createElement('script');sc.src='desc_'+s+'.js';sc.onload=sc.onerror=ok;document.head.appendChild(sc)});
+  const tx=async u=>(await fetch(u)).text();
+  const [pag,i18]=await Promise.all([tx('index.html'),tx('i18n.js')]);
+  // miniature ricompresse (webp piccolo) e incorporate: la pagina resta un unico file
+  const img=new Map(),co=gs.filter(g=>g.i),tt=co.length;let n=0;
+  const cv=document.createElement('canvas');
+  const rid=async u=>{
+   const bm=await createImageBitmap(await (await fetch(u)).blob());
+   const k=Math.min(1,220/bm.width);cv.width=Math.round(bm.width*k);cv.height=Math.round(bm.height*k);
+   cv.getContext('2d').drawImage(bm,0,0,cv.width,cv.height);bm.close();
+   let d=cv.toDataURL('image/webp',.55);if(!d.startsWith('data:image/webp'))d=cv.toDataURL('image/jpeg',.6);return d};
+  const w=async()=>{while(co.length){const g=co.pop();try{img.set(g.id,await rid(g.i))}catch(e){}b.textContent=T('Immagini {n} di {t}…',{n:++n,t:tt})}};
+  await Promise.all([w(),w(),w(),w()]);
+  const dati=gs.map(g=>{const r=Object.assign({},g);if(img.has(g.id))r.i=img.get(g.id);else delete r.i;return r});
+  const ds={};new Set(gs.map(g=>g.s)).forEach(s=>{const m=(window.DESC&&window.DESC[s])||{},o={};gs.forEach(g=>{if(g.s===s&&m[g.f])o[g.f]=m[g.f]});ds[s]=o});
+  const js=x=>JSON.stringify(x).replace(/</g,'\\u003c');
+  const nome=pack.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const css='#ver,#pkb,#imp,#av,#dw,#pfs,#ph,.sel{display:none!important}';
+  const h=pag
+   .replace(/<title>[\s\S]*?<\/title>/,'<title>'+nome+'</title>')
+   .replace('</style>',css+'</style>')
+   .replace(/<div class="brand">[\s\S]*?<\/div>/,'<div class="brand">'+nome+' <button id="ver" class="ver" type="button"></button></div>')
+   .replace('<script src="i18n.js"><\/script>',()=>'<script>'+i18.replace(/<\/script/gi,'<\\/script')+'<\/script>')
+   .replace('<script src="data.js"><\/script>',()=>'<script>window.GIOCHI='+js(dati)+';window.DESC='+js(ds)+';window.CONFIG={};<\/script>');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([h],{type:'text/html'}));
+  a.download='pack-'+pack.replace(/[^\w.-]+/g,'_')+'.html';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+ }catch(e){b.textContent=T('Esportazione non riuscita');await new Promise(r=>setTimeout(r,2500));throw e}
+ finally{b.disabled=false;b.textContent=t0}};
+$('pj').onclick=()=>{
+ const gs=D.filter(g=>sel.has(g.id));if(!gs.length)return;
+ const e=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ const per={};gs.forEach(g=>(per[g.s]||(per[g.s]=[])).push(g));
+ const sez=Object.keys(per).sort().map(s=>'<section><h2>'+e(s)+' <small>'+per[s].length.toLocaleString(LOC)+'</small></h2><table>'+per[s].sort((a,b)=>a.t.localeCompare(b.t)).map(g=>'<tr><td>'+e(g.t)+'</td><td>'+(g.y||'')+'</td></tr>').join('')+'</table></section>').join('\n');
+ const h='<!doctype html><html lang="'+(LANG==='en'?'en':'it')+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+e(pack)+'</title><style>body{font:15px/1.5 system-ui,sans-serif;margin:0 auto;max-width:720px;padding:16px;background:#fff;color:#222}@media(prefers-color-scheme:dark){body{background:#16181c;color:#e6e6e6}}header{position:sticky;top:0;background:inherit;padding:8px 0;border-bottom:1px solid #8884}h1{margin:0 0 6px;font-size:22px}input{width:100%;padding:8px;font:inherit;box-sizing:border-box}h2{margin:22px 0 6px;font-size:17px}small{opacity:.6;font-weight:400}table{width:100%;border-collapse:collapse}td{padding:3px 6px;border-bottom:1px solid #8882}td+td{width:60px;text-align:right;opacity:.7}@media print{header{position:static}input{display:none}}</style></head><body><header><h1>'+e(pack)+'</h1><div>'+e(T('{n} giochi, {s}',{n:gs.length.toLocaleString(LOC),s:gb(gs.reduce((a,g)=>a+g.sz,0))}))+'</div><input id="q" type="search" placeholder="'+e(T('Cerca'))+'"></header>\n'+sez+'\n<script>document.getElementById("q").oninput=function(){var v=this.value.toLowerCase();document.querySelectorAll("tr").forEach(function(r){r.hidden=!r.textContent.toLowerCase().includes(v)});document.querySelectorAll("section").forEach(function(s){s.hidden=!s.querySelector("tr:not([hidden])")})}<\/script></body></html>';
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([h],{type:'text/html'}));
+ a.download='elenco-'+pack.replace(/[^\w.-]+/g,'_')+'.html';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000)};
 $('ps').onclick=()=>{
  const r={};D.forEach(g=>{const x=r[g.s]||(r[g.s]={n:0,t:0,sn:0,st:0});x.n++;x.t+=g.sz;if(sel.has(g.id)){x.sn++;x.st+=g.sz}});
  const rt=$('rt');rt.replaceChildren();

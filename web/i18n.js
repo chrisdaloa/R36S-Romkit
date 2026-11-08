@@ -54,7 +54,7 @@
   'Pack e schede':'Packs and cards','Chiudi il pannello':'Close the panel','Pack attivo':'Active pack','Nessun pack':'No pack',
   'Nome nuovo pack (es. SD 64 GB)':'New pack name (e.g. SD 64 GB)','Nome nuovo pack':'New pack name','Crea pack':'Create pack',
   'Spazio utile (GB)':'Usable space (GB)','Riserva (GB)':'Reserve (GB)',
-  'Aggiungi i risultati':'Add the results','Togli i risultati':'Remove the results','Riepilogo':'Summary','Esporta elenco':'Export list',
+  'Aggiungi i risultati':'Add the results','Togli i risultati':'Remove the results','Riepilogo':'Summary','Esporta elenco':'Export list','Esporta pagina HTML':'Export HTML page','Esporta elenco sintetico':'Export short list','{n} giochi, {s}':'{n} games, {s}','Immagini {n} di {t}…':'Images {n} of {t}…','Esportazione non riuscita':'Export failed',
   'Scegli prima un pack':'Choose a pack first','{n} giochi su {cap} GB':'{n} games on {cap} GB',
   'Sforato di {x} (con riserva di {r} GB).':'Over by {x} (with a {r} GB reserve).','Margine di {x}, con riserva di {r} GB.':'{x} to spare, with a {r} GB reserve.',
   'Elimina pack':'Delete pack','Conferma: elimina «{n}»':'Confirm: delete «{n}»',
