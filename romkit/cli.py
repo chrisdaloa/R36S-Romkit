@@ -45,6 +45,14 @@ def main(argv=None):
     if a.cmd == 'demo':
         from . import demo
         return demo.crea(a.cartella)
+    if a.cmd == 'serve' and not a.setup and os.path.exists(a.config):
+        try:
+            _c = C.carica(a.config)
+            if not _c.archivio or not os.path.isdir(_c.archivio):
+                print(f'Archivio non raggiungibile: {_c.archivio!r}: avvio la configurazione guidata.')
+                a.setup = True
+        except Exception:
+            pass
     if a.cmd == 'serve' and (a.setup or not os.path.exists(a.config)):
         from . import server
         return server.serve_setup(os.path.abspath(a.config), porta=a.porta, apri=a.apri or versione.CONGELATO)
