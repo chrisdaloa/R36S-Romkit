@@ -197,6 +197,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
  <button id="pkb" class="btn packbtn" type="button" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M10 3v4M13 3v4"/></svg><span id="pkn">Pack</span><span class="mini" id="pkm"><i></i></span></button>
  <select id="lng" class="lng" translate="no" aria-label="Lingua dell'interfaccia" title="Lingua dell'interfaccia"><option value="it">Italiano</option><option value="en">English</option></select>
  <a id="imp" class="btn" href="setup.html" title="Cambia archivio, cartelle, accesso e Gioca"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Impostazioni</a>
+ <a id="kofi" class="btn" href="https://ko-fi.com/chrisdaloa" target="_blank" rel="noopener" title="Se il programma ti è utile, puoi sostenerlo su Ko-fi"><svg viewBox="0 0 24 24"><path d="M5 8h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M16 9h2a2 2 0 0 1 0 5h-2"/></svg>Offrimi un caffè</a>
 </header>
 <div id="av" class="warn" hidden>Pack non salvati sul NAS: il NAS non è raggiungibile. Le modifiche restano in questo browser.</div>
 <div class="body">
@@ -451,7 +452,7 @@ $('ph').onclick=async()=>{
   const ds={};new Set(gs.map(g=>g.s)).forEach(s=>{const m=(window.DESC&&window.DESC[s])||{},o={};gs.forEach(g=>{if(g.s===s&&m[g.f])o[g.f]=m[g.f]});ds[s]=o});
   const js=x=>JSON.stringify(x).replace(/</g,'\\u003c');
   const nome=pack.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const css='#ver,#pkb,#imp,#av,#dw,#pfs,#ph,.sel{display:none!important}';
+  const css='#ver,#pkb,#imp,#kofi,#av,#dw,#pfs,#ph,.sel{display:none!important}';
   const h=pag
    .replace(/<title>[\s\S]*?<\/title>/,'<title>'+nome+'</title>')
    .replace('</style>',css+'</style>')

@@ -25,7 +25,7 @@
   // intestazione e filtri
   'Catalogo giochi':'Game catalogue','catalogo giochi':'game catalogue','Cerca un titolo':'Search a title','Cerca':'Search',
   'Filtri':'Filters','Ordina per':'Sort by','Ordine':'Order','Titolo':'Title','Anno (recenti)':'Year (newest)','Valutazione':'Rating',
-  'Dimensione':'Size','Sistema':'System','Vista':'View','Griglia':'Grid','Elenco':'List','Pack':'Pack','Impostazioni':'Settings',
+  'Dimensione':'Size','Sistema':'System','Vista':'View','Griglia':'Grid','Elenco':'List','Pack':'Pack','Impostazioni':'Settings','Offrimi un caffè':'Buy me a coffee','Se il programma ti è utile, puoi sostenerlo su Ko-fi':'If you find the program useful, you can support it on Ko-fi',
   'Cambia archivio, cartelle, accesso e Gioca':'Change collection, folders, access and Play',
   'Disponibile solo dal PC che ospita il catalogo':'Only available from the PC that hosts the catalogue',
   'Le impostazioni si cambiano solo dal PC che ospita il catalogo (indirizzo localhost).':'Settings can only be changed from the PC that hosts the catalogue (localhost address).',

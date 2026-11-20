@@ -39,6 +39,9 @@ Nel pannello «Pack», scegli il pack e la scheda (inserita in questo PC) e prem
 Garanzie: i giochi tolti vengono spostati in `_rimossi/<data>/` sulla scheda, mai cancellati; salvataggi, impostazioni e `ports` non si toccano; le cartelle di servizio (`bios`, temi...) si aggiungono solo se mancano, mai sovrascritte o tolte; se le rimozioni superano il 20% della scheda serve una conferma in più; un registro `sync-<data>.log` resta nella cartella del pack. I sistemi esclusi dalla sincronizzazione si impostano in `[sync].non_toccare` (default `["ports"]`).
 Le modifiche sono possibili solo dal PC che ospita il programma: aprendolo dalla rete locale (`host = "0.0.0.0"`) il catalogo è solo consultabile. Con `pack_da_rete = true` in `[server]` i pack si possono salvare anche da altri PC della rete locale (schede e sincronizzazione restano solo locali). Per ora le schede devono essere montate localmente.
 
+## Sostegno
+Se il programma ti è utile puoi offrirmi un caffè su [Ko-fi](https://ko-fi.com/chrisdaloa). Resta tutto gratuito.
+
 ## Sicurezza
 Il server ascolta di default solo su `127.0.0.1` e non ha autenticazione. Non esporlo su Internet.
 «Gioca» serve le ROM: tienilo spento salvo che in rete domestica.

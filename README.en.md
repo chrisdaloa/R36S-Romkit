@@ -34,6 +34,9 @@ In the "Pack" panel pick the pack and the card (mounted on this PC), then press 
 
 Removed games are moved to `_rimossi/<date>/` on the card, never deleted; saves, settings, `ports` and support files are left alone; removing more than 20% of the card needs an extra confirmation. Writes are only allowed from the PC running the program (over the LAN the catalog is read-only; with `pack_da_rete = true` in `[server]`, packs can also be saved from other PCs on the local network). Cards must be mounted locally for now.
 
+## Support
+If you find the program useful you can buy me a coffee on [Ko-fi](https://ko-fi.com/chrisdaloa). Everything stays free.
+
 ## Security
 The server listens on `127.0.0.1` only by default and has no authentication. Never expose it to the Internet. «Play» serves ROMs: keep it off outside a trusted home network.
 
