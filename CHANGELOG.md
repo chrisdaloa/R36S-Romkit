@@ -2,6 +2,9 @@
 
 Il numero di versione sta in `romkit/versione.py` (`NUMERO`). Si vede nella pagina, accanto al nome, e con `romkit --version`.
 
+## 0.5.1 — 2026-11-21
+- Sincronizzazione: i file di configurazione con un secondo suffisso (`ppsspp.ini.go`, `ppsspp.ini.sdl`) non vengono più proposti da togliere dalla scheda.
+
 ## 0.5.0 — 2026-11-08
 - «Esporta pagina HTML»: un unico file con il catalogo identico a quello della pagina, ma solo con i giochi del pack e senza impostazioni né gestione. Contiene filtri, ricerca, schede di dettaglio, descrizioni e miniature ricompresse; si apre anche offline, ideale da condividere.
 - «Esporta elenco sintetico»: una pagina leggera con sistema, nome del gioco, lingue (quando note) e anno in una tabella con il sistema nella prima colonna (intestazione fissa scorrendo) e con ricerca.

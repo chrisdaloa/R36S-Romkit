@@ -79,7 +79,7 @@ def piano(cfg, dove, pack, cartella='_anteprima', stato=None):
             upd.append((p, n))
     for p, n in sorted(sd.items()):
         b = os.path.basename(p).lower()
-        if p.split('/', 1)[0] not in sistemi or p in voluto or b.startswith('gamelist.xml') or b.endswith(SALVATAGGI + SUPPORTO) or '.state' in b:
+        if p.split('/', 1)[0] not in sistemi or p in voluto or b.startswith('gamelist.xml') or b.endswith(SALVATAGGI + SUPPORTO) or '.state' in b or any(e + '.' in b for e in SUPPORTO):
             continue
         if os.path.isfile(os.path.join(arch, p)):
             tog.append((p, n))
