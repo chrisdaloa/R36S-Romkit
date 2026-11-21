@@ -124,7 +124,9 @@ def applica(cfg, dove, piano, aggiungi=True, togli=True, sistemi=None, stato=Non
         libero = shutil.disk_usage(dove).free + sum(n for _, n in tog)
         servono = sum(n for _, n in agg)
         if servono * 1.02 > libero:
-            raise SystemExit(f'Spazio insufficiente: servono {servono / 1e9:.1f} GB, disponibili {libero / 1e9:.1f} GB')
+            raise SystemExit(f'Spazio insufficiente sulla scheda. Il pack «{piano["pack"]}» richiede di copiare {servono / 1e9:.2f} GB '
+                             f'(più un margine di sicurezza del 2%: {servono * 1.02 / 1e9:.2f} GB), ma sulla scheda sono liberi {libero / 1e9:.2f} GB: '
+                             f'mancano {(servono * 1.02 - libero) / 1e9:.2f} GB. Non è stato copiato nulla. Togli qualche gioco dal pack o libera spazio sulla scheda.')
     data = time.strftime('%Y-%m-%d_%H%M%S')
     log = [f'Sincronizzazione {data} - {piano["pack"]} -> {dove}']
     stato.update(fase='togli', fatti=0, totale=len(tog), passi=(bool(tog) + bool(agg) + 1))

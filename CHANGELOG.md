@@ -2,6 +2,9 @@
 
 Il numero di versione sta in `romkit/versione.py` (`NUMERO`). Si vede nella pagina, accanto al nome, e con `romkit --version`.
 
+## 0.5.4 — 2026-11-21
+- Sincronizzazione: il messaggio «spazio insufficiente» ora dice di quale pack si tratta, quanto serve (con il margine del 2%), quanto è libero e quanto manca, e che non è stato copiato nulla.
+
 ## 0.5.3 — 2026-11-21
 - Giochi con la protezione LibCrypt (per esempio Final Fantasy IX europeo): i file `.sbi` accanto ai dischi non compaiono più nel catalogo come giochi e il salvataggio dei pack li conserva, così arrivano sulla scheda.
 

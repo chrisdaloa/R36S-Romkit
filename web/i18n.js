@@ -158,7 +158,7 @@
  };
  // messaggi del server con valori dentro: [espressione, sostituzione]
  const RX=[
-  [/^Spazio insufficiente: servono ([\d.]+) GB, disponibili ([\d.]+) GB$/,'Not enough space: $1 GB needed, $2 GB available'],
+  [/^Spazio insufficiente sulla scheda\. Il pack «(.+)» richiede di copiare ([\d.,]+) GB \(più un margine di sicurezza del 2%: ([\d.,]+) GB\), ma sulla scheda sono liberi ([\d.,]+) GB: mancano ([\d.,]+) GB\. Non è stato copiato nulla\. Togli qualche gioco dal pack o libera spazio sulla scheda\.$/,'Not enough space on the card. Pack «$1» needs $2 GB to be copied (plus a 2% safety margin: $3 GB), but the card has $4 GB free: $5 GB short. Nothing was copied. Remove some games from the pack or free up space on the card.'],
   [/^SSH fallito verso (.+)$/,'SSH failed towards $1'],
   [/^Copia interrotta: (.*)$/,'Copy interrupted: $1'],
   [/^Gamelist non aggiornati: (.*)$/,'Gamelists not updated: $1'],
