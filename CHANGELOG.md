@@ -2,6 +2,9 @@
 
 Il numero di versione sta in `romkit/versione.py` (`NUMERO`). Si vede nella pagina, accanto al nome, e con `romkit --version`.
 
+## 0.5.2 — 2026-11-21
+- Pack: salvando dal catalogo non si perdono più i file di servizio che la pagina non mostra (`.m3u`, `.nv`, `.ccd`, `.sub`, `.img`), come il `.m3u` dei giochi su più dischi.
+
 ## 0.5.1 — 2026-11-21
 - Sincronizzazione: i file di configurazione con un secondo suffisso (`ppsspp.ini.go`, `ppsspp.ini.sdl`) non vengono più proposti da togliere dalla scheda.
 
