@@ -420,7 +420,7 @@ function barra(){
  nt.textContent=tot>cap?T('Sforato di {x} (con riserva di {r} GB).',{x:gb(tot-cap),r:p.ris}):T('Margine di {x}, con riserva di {r} GB.',{x:gb(cap-tot),r:p.ris})}
 function attiva(n){
  pack=n;sel=new Set(n?P[n].ids:[]);selSz=0;
- if(n){const m=new Map(D.map(g=>[g.id,g.sz]));sel.forEach(i=>{if(m.has(i))selSz+=m.get(i);else if(!/\.(m3u|nv|ccd|sub|img)$/i.test(i))sel.delete(i)})}
+ if(n){const m=new Map(D.map(g=>[g.id,g.sz]));sel.forEach(i=>{if(m.has(i))selSz+=m.get(i);else if(!/\.(m3u|nv|ccd|sub|img|sbi)$/i.test(i))sel.delete(i)})}
  try{localStorage.setItem('pack',n)}catch(e){}
  if(n&&$('dw').hidden&&!document.body.dataset.chiuso)pannello(true);
  elenco();barra();filtra()}

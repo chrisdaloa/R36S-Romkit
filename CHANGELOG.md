@@ -2,6 +2,9 @@
 
 Il numero di versione sta in `romkit/versione.py` (`NUMERO`). Si vede nella pagina, accanto al nome, e con `romkit --version`.
 
+## 0.5.3 — 2026-11-21
+- Giochi con la protezione LibCrypt (per esempio Final Fantasy IX europeo): i file `.sbi` accanto ai dischi non compaiono più nel catalogo come giochi e il salvataggio dei pack li conserva, così arrivano sulla scheda.
+
 ## 0.5.2 — 2026-11-21
 - Pack: salvando dal catalogo non si perdono più i file di servizio che la pagina non mostra (`.m3u`, `.nv`, `.ccd`, `.sub`, `.img`), come il `.m3u` dei giochi su più dischi.
 
