@@ -8,7 +8,7 @@ from PIL import Image
 
 MEDIA = {'images', 'videos', 'media', 'manuals', 'image', 'video', 'snaps', 'boxart', 'marquees', 'covers', 'thumbnails'}
 NOT_GAME = ('.png', '.jpg', '.jpeg', '.mp4', '.xml', '.txt', '.bak', '.pdf', '.srm', '.state', '.sav', '.cfg',
-            '.db', '.ini', '.sh', '.gif', '.mp3', '.ogg', '.m3u', '.sub', '.ccd', '.img')
+            '.db', '.ini', '.sh', '.gif', '.mp3', '.ogg', '.m3u', '.sub', '.ccd', '.img', '.nv')
 IMG_TAGS = ('image', 'thumbnail', 'boxart', 'titleshot', 'screenshot', 'marquee', 'wheel', 'mix', 'fanart')
 THUMB = 220
 

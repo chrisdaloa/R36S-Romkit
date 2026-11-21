@@ -210,7 +210,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
   <section><h3>Giocatori</h3><div class="seg full" id="pl" role="group" aria-label="Giocatori"></div></section>
   <section><h3>Voto minimo</h3><div class="seg full" id="mr" role="group" aria-label="Valutazione minima"></div></section>
   <section><h3>Anno</h3><div class="row"><input id="a1" type="number" placeholder="Da" min="1970" max="2030" aria-label="Anno da"><input id="a2" type="number" placeholder="A" min="1970" max="2030" aria-label="Anno a"></div></section>
-  <section><label class="chk"><input id="ni" type="checkbox"> Solo senza immagine</label></section>
+  <section><label class="chk"><input id="ni" type="checkbox"> Solo senza immagine</label><label class="chk"><input id="nd" type="checkbox"> Solo senza dati</label><small id="nsc" class="mu" style="display:block;margin-top:6px"></small></section>
   <section id="pfs" hidden><h3>Nel pack</h3><div class="seg full" id="pf" role="group" aria-label="Filtro pack"></div></section>
  </aside>
  <main id="g"></main>
@@ -315,13 +315,15 @@ let ris=[],mostrati=0;
 const ST=x=>x.status+' '+T(x.statusText);
 const mb=n=>n?(n>=1e9?(n/1e9).toFixed(1)+' GB':(n/1e6).toFixed(1)+' MB'):'';
 const maxP=p=>Math.max(...(p.match(/\d+/g)||[0]).map(Number));
+const senzaDati=g=>!(g.y||g.g||g.d||g.r);
 function filtra(){
- const q=norm($('q').value.trim()).split(/\s+/).filter(Boolean),ge=$('ge').value,lg=$('lg').value,pl=+$('pl').value,a1=+$('a1').value,a2=+$('a2').value,mr=+$('mr').value,s=$('s').value,ni=$('ni').checked,o=$('o').value,pf=pack?$('pf').value:'';
+ const q=norm($('q').value.trim()).split(/\s+/).filter(Boolean),ge=$('ge').value,lg=$('lg').value,pl=+$('pl').value,a1=+$('a1').value,a2=+$('a2').value,mr=+$('mr').value,s=$('s').value,ni=$('ni').checked,nd=$('nd').checked,o=$('o').value,pf=pack?$('pf').value:'';
  [...$('sl').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===s));
- ris=D.filter(g=>(!s||g.s===s)&&(!ni||!g.i)&&(!ge||(g.c&&g.c.includes(ge)))&&(!lg||(lg==='-'?!g.l:(g.l&&g.l.includes(lg))))&&(!pl||(g.p&&maxP(g.p)>=pl))&&(!a1||(g.y&&g.y>=a1))&&(!a2||(g.y&&g.y<=a2))&&(!mr||(g.r&&g.r>=mr))&&(!pf||(pf==='in')===sel.has(g.id))&&q.every(w=>g.k.includes(w)));
+ ris=D.filter(g=>(!s||g.s===s)&&(!ni||!g.i)&&(!nd||senzaDati(g))&&(!ge||(g.c&&g.c.includes(ge)))&&(!lg||(lg==='-'?!g.l:(g.l&&g.l.includes(lg))))&&(!pl||(g.p&&maxP(g.p)>=pl))&&(!a1||(g.y&&g.y>=a1))&&(!a2||(g.y&&g.y<=a2))&&(!mr||(g.r&&g.r>=mr))&&(!pf||(pf==='in')===sel.has(g.id))&&q.every(w=>g.k.includes(w)));
  ris.sort(o==='y'?(a,b)=>(b.y||0)-(a.y||0):o==='r'?(a,b)=>(b.r||0)-(a.r||0):o==='sz'?(a,b)=>b.sz-a.sz:o==='s'?(a,b)=>a.s.localeCompare(b.s)||a.t.localeCompare(b.t):(a,b)=>a.t.localeCompare(b.t,LOC));
  $('g').replaceChildren();vis.clear();mostrati=0;altri();
  $('cont').textContent=T('{n} giochi',{n:ris.length.toLocaleString(LOC)});
+ {const b=D.filter(g=>!s||g.s===s);$('nsc').textContent=T('{a} senza immagine, {b} senza dati (su {t})',{a:b.filter(g=>!g.i).length.toLocaleString(LOC),b:b.filter(senzaDati).length.toLocaleString(LOC),t:b.length.toLocaleString(LOC)})}
  if(!ris.length){const v=document.createElement('p');v.style.cssText='grid-column:1/-1;color:var(--mu)';v.textContent=T('Nessun gioco corrisponde ai filtri. Prova ad azzerarli dal pannello a sinistra.');$('g').appendChild(v)}
 }
 function altri(){
@@ -343,9 +345,9 @@ function altri(){
  $('più').hidden=mostrati>=ris.length;
 }
 let tm;$('q').addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(filtra,150)});
-['s','o','ni','ge','pl','mr','lg','pf'].forEach(i=>$(i).addEventListener('change',filtra));
+['s','o','ni','nd','ge','pl','mr','lg','pf'].forEach(i=>$(i).addEventListener('change',filtra));
 ['a1','a2'].forEach(i=>$(i).addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(filtra,300)}));
-$('rz').onclick=()=>{$('q').value='';$('s').value='';$('ge').value='';$('lg').value='';$('pl').value='';$('mr').value='0';$('a1').value='';$('a2').value='';$('ni').checked=false;$('pf').value='';filtra()};
+$('rz').onclick=()=>{$('q').value='';$('s').value='';$('ge').value='';$('lg').value='';$('pl').value='';$('mr').value='0';$('a1').value='';$('a2').value='';$('ni').checked=false;$('nd').checked=false;$('pf').value='';filtra()};
 $('più').addEventListener('click',altri);
 function vista(){$('g').classList.toggle('lista',$('vs').value==='lista');try{localStorage.setItem('vista',$('vs').value)}catch(e){}}
 try{$('vs').value=localStorage.getItem('vista')||''}catch(e){}
