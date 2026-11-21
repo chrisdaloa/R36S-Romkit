@@ -157,7 +157,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
 #pi img{width:100%;border-radius:10px;background:#0d0e14}
 #pn h2,#rs h2{margin:0 0 8px;font-size:20px;letter-spacing:-.01em}
 #pn dl{margin:12px 0;display:grid;grid-template-columns:auto 1fr;gap:5px 16px;font-size:13px}
-#pn dt{color:var(--mu)}#pn dd{margin:0;overflow-wrap:anywhere}
+#pn dt{color:var(--mu)}#pn dd{margin:0;overflow-wrap:anywhere;white-space:pre-line}
 #pn p{color:var(--tx);opacity:.9}
 .x{position:absolute;top:12px;right:12px;width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--pn2)}
 .x:hover{background:var(--ln)}
@@ -299,18 +299,27 @@ function senzaNumero(g){
  const n=m[1],r=g.t.slice(m[0].length),indice=n!=='007'&&((n[0]==='0'&&n.length>=3)||(g.s==='psp'&&n.length>=5)||(n.length===3&&g.f.startsWith(n+' ')&&!/\.(zip|7z)$/i.test(g.f)));
  return indice&&r?r:g.t}
 D.forEach(g=>{g.t0=g.t;g.t=senzaNumero(g);g.k=norm(g.t0+' '+g.t+' '+g.f);g.id=g.s+'/'+g.f});
-const conta={};D.forEach(g=>conta[g.s]=(conta[g.s]||0)+1);
+// giochi su più dischi («(Disc 1)», «(Disk 2 of 3)», «_Disk3»): una sola scheda per gioco; D resta l'elenco di tutti i file
+const RX_DISCO=/\s*(?:\((?:Disc|Disk|CD)\s*\d+(?:\s*of\s*\d+)?\)|_Disk\d+)/i;
+const V=(()=>{const gr=new Map();
+ D.forEach(g=>{g.szT=g.sz;if(!RX_DISCO.test(g.f))return;const k=g.s+'/'+g.f.replace(RX_DISCO,'');if(!gr.has(k))gr.set(k,[]);gr.get(k).push(g)});
+ const nasc=new Set();
+ gr.forEach(m=>{if(m.length<2)return;m.sort((a,b)=>a.f.localeCompare(b.f,'en',{numeric:true}));const r=m[0];
+  r.dischi=m;r.szT=m.reduce((x,y)=>x+y.sz,0);r.k+=' '+m.map(y=>y.k).join(' ');m.slice(1).forEach(y=>nasc.add(y))});
+ return D.filter(g=>!nasc.has(g))})();
+const nelPack=g=>{const d=g.dischi||[g],n=d.filter(x=>sel.has(x.id)).length;return n===0?0:n===d.length?1:2};
+const conta={};V.forEach(g=>conta[g.s]=(conta[g.s]||0)+1);
 function voceSistema(v,nome,n){const b=document.createElement('button');b.type='button';b.dataset.v=v;b.append(nome);const c=document.createElement('span');c.textContent=n.toLocaleString(LOC);b.appendChild(c);
  b.onclick=()=>{$('s').value=(v&&$('s').value===v)?'':v;filtra()};$('sl').appendChild(b)}
-voceSistema('',T('Tutti i sistemi'),D.length);
+voceSistema('',T('Tutti i sistemi'),V.length);
 Object.keys(conta).sort().forEach(s=>voceSistema(s,s,conta[s]));
 const gen=[...new Set(D.flatMap(g=>g.c||[]))].sort((a,b)=>a.localeCompare(b,LOC));
 gen.forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=x;$('ge').appendChild(o)});
 const stelle=r=>'★'.repeat(Math.floor(r))+(r%1?'½':'');
 const NL={en:'Inglese',fr:'Francese',de:'Tedesco',es:'Spagnolo',it:'Italiano',nl:'Olandese',pt:'Portoghese',sv:'Svedese',no:'Norvegese',da:'Danese',fi:'Finlandese',ja:'Giapponese',zh:'Cinese',ko:'Coreano',ru:'Russo',pl:'Polacco',ca:'Catalano',cs:'Ceco',el:'Greco',tr:'Turco',hu:'Ungherese'};
-const cl={};D.forEach(g=>(g.l||[]).forEach(x=>cl[x]=(cl[x]||0)+1));
+const cl={};V.forEach(g=>(g.l||[]).forEach(x=>cl[x]=(cl[x]||0)+1));
 Object.keys(cl).sort((a,b)=>cl[b]-cl[a]).forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=T(NL[x]||x)+' ('+cl[x]+')';$('lg').appendChild(o)});
-{const o=document.createElement('option');o.value='-';o.textContent=T('Lingua non indicata ({n})',{n:D.filter(g=>!g.l).length});$('lg').appendChild(o)}
+{const o=document.createElement('option');o.value='-';o.textContent=T('Lingua non indicata ({n})',{n:V.filter(g=>!g.l).length});$('lg').appendChild(o)}
 let ris=[],mostrati=0;
 const ST=x=>x.status+' '+T(x.statusText);
 const mb=n=>n?(n>=1e9?(n/1e9).toFixed(1)+' GB':(n/1e6).toFixed(1)+' MB'):'';
@@ -319,11 +328,11 @@ const senzaDati=g=>!(g.y||g.g||g.d||g.r);
 function filtra(){
  const q=norm($('q').value.trim()).split(/\s+/).filter(Boolean),ge=$('ge').value,lg=$('lg').value,pl=+$('pl').value,a1=+$('a1').value,a2=+$('a2').value,mr=+$('mr').value,s=$('s').value,ni=$('ni').checked,nd=$('nd').checked,o=$('o').value,pf=pack?$('pf').value:'';
  [...$('sl').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===s));
- ris=D.filter(g=>(!s||g.s===s)&&(!ni||!g.i)&&(!nd||senzaDati(g))&&(!ge||(g.c&&g.c.includes(ge)))&&(!lg||(lg==='-'?!g.l:(g.l&&g.l.includes(lg))))&&(!pl||(g.p&&maxP(g.p)>=pl))&&(!a1||(g.y&&g.y>=a1))&&(!a2||(g.y&&g.y<=a2))&&(!mr||(g.r&&g.r>=mr))&&(!pf||(pf==='in')===sel.has(g.id))&&q.every(w=>g.k.includes(w)));
- ris.sort(o==='y'?(a,b)=>(b.y||0)-(a.y||0):o==='r'?(a,b)=>(b.r||0)-(a.r||0):o==='sz'?(a,b)=>b.sz-a.sz:o==='s'?(a,b)=>a.s.localeCompare(b.s)||a.t.localeCompare(b.t):(a,b)=>a.t.localeCompare(b.t,LOC));
+ ris=V.filter(g=>(!s||g.s===s)&&(!ni||!g.i)&&(!nd||senzaDati(g))&&(!ge||(g.c&&g.c.includes(ge)))&&(!lg||(lg==='-'?!g.l:(g.l&&g.l.includes(lg))))&&(!pl||(g.p&&maxP(g.p)>=pl))&&(!a1||(g.y&&g.y>=a1))&&(!a2||(g.y&&g.y<=a2))&&(!mr||(g.r&&g.r>=mr))&&(!pf||(pf==='in')===(nelPack(g)>0))&&q.every(w=>g.k.includes(w)));
+ ris.sort(o==='y'?(a,b)=>(b.y||0)-(a.y||0):o==='r'?(a,b)=>(b.r||0)-(a.r||0):o==='sz'?(a,b)=>b.szT-a.szT:o==='s'?(a,b)=>a.s.localeCompare(b.s)||a.t.localeCompare(b.t):(a,b)=>a.t.localeCompare(b.t,LOC));
  $('g').replaceChildren();vis.clear();mostrati=0;altri();
  $('cont').textContent=T('{n} giochi',{n:ris.length.toLocaleString(LOC)});
- {const b=D.filter(g=>!s||g.s===s);$('nsc').textContent=T('{a} senza immagine, {b} senza dati (su {t})',{a:b.filter(g=>!g.i).length.toLocaleString(LOC),b:b.filter(senzaDati).length.toLocaleString(LOC),t:b.length.toLocaleString(LOC)})}
+ {const b=V.filter(g=>!s||g.s===s);$('nsc').textContent=T('{a} senza immagine, {b} senza dati (su {t})',{a:b.filter(g=>!g.i).length.toLocaleString(LOC),b:b.filter(senzaDati).length.toLocaleString(LOC),t:b.length.toLocaleString(LOC)})}
  if(!ris.length){const v=document.createElement('p');v.style.cssText='grid-column:1/-1;color:var(--mu)';v.textContent=T('Nessun gioco corrisponde ai filtri. Prova ad azzerarli dal pannello a sinistra.');$('g').appendChild(v)}
 }
 function altri(){
@@ -334,12 +343,12 @@ function altri(){
   if(g.i){const i=new Image();i.loading='lazy';i.alt=g.t;i.src=g.i;im.appendChild(i)}else im.textContent=g.t;
   const tx=document.createElement('div');tx.className='tx';
   const t=document.createElement('div');t.className='t';t.textContent=g.t;t.title=g.f;
-  const m=document.createElement('div');m.className='m';m.textContent=g.s+(g.y?' · '+g.y:'')+(g.sz?' · '+mb(g.sz):'');
+  const m=document.createElement('div');m.className='m';m.textContent=g.s+(g.y?' · '+g.y:'')+(g.dischi?' · '+T('{n} dischi',{n:g.dischi.length}):'')+(g.szT?' · '+mb(g.szT):'');
   if(g.it){const b=document.createElement('span');b.className='b';b.textContent='ITA';m.appendChild(b)}
   if(g.r){const r=document.createElement('div');r.className='st';r.textContent=stelle(g.r);tx.append(t,m,r)}else{const r=document.createElement('div');tx.append(t,m,r)}
-  const cb=document.createElement('input');cb.type='checkbox';cb.className='sel';cb.checked=sel.has(g.id);cb.title=T('Nel pack');cb.setAttribute('aria-label',T('Nel pack: {t}',{t:g.t}));
+  const cb=document.createElement('input');cb.type='checkbox';cb.className='sel';{const n=nelPack(g);cb.checked=n===1;cb.indeterminate=n===2}cb.title=T('Nel pack');cb.setAttribute('aria-label',T('Nel pack: {t}',{t:g.t}));
   cb.onclick=e=>e.stopPropagation();cb.onchange=()=>{imposta([g],cb.checked)};
-  c.classList.toggle('on',cb.checked);vis.set(g.id,{c,cb});
+  c.classList.toggle('on',nelPack(g)>0);vis.set(g.id,{c,cb});
   c.onclick=()=>apri(g);c.append(cb,im,tx);fr.appendChild(c)});
  $('g').appendChild(fr);mostrati=Math.min(ris.length,mostrati+PAG);
  $('più').hidden=mostrati>=ris.length;
@@ -358,13 +367,13 @@ function apri(g){
  if(g.i){const i=new Image();i.src=g.i;i.alt=g.t;pi.appendChild(i)}
  const h2=document.createElement('h2');h2.textContent=g.t;
  const dl=document.createElement('dl');
- [['Sistema',g.s],['Anno',g.y],['Voto',g.r?stelle(g.r)+' ('+g.r+'/5)':''],['Genere',g.c?g.c.join(', ')+' ('+g.g+')':''],['Lingue',g.l?g.l.map(x=>NL[x]||x).join(', '):''],['Giocatori',g.p],['Sviluppatore',g.d],['Editore',g.e],['File',g.f],['Dimensione',mb(g.sz)]].forEach(([k,v])=>{if(!v)return;const a=document.createElement('dt'),b=document.createElement('dd');a.textContent=T(k);b.textContent=v;dl.append(a,b)});
+ [['Sistema',g.s],['Anno',g.y],['Voto',g.r?stelle(g.r)+' ('+g.r+'/5)':''],['Genere',g.c?g.c.join(', ')+' ('+g.g+')':''],['Lingue',g.l?g.l.map(x=>NL[x]||x).join(', '):''],['Giocatori',g.p],['Sviluppatore',g.d],['Editore',g.e],['File',g.dischi?g.dischi.map(x=>x.f).join('\n'):g.f],['Dimensione',mb(g.szT)]].forEach(([k,v])=>{if(!v)return;const a=document.createElement('dt'),b=document.createElement('dd');a.textContent=T(k);b.textContent=v;dl.append(a,b)});
  const p=document.createElement('p');p.style.margin='0';
  const mostra=()=>{const d=(window.DESC&&window.DESC[g.s]||{})[g.f];p.textContent=d||''};
  if(window.DESC&&window.DESC[g.s])mostra();else{const sc=document.createElement('script');sc.src='desc_'+g.s+'.js';sc.onload=mostra;document.head.appendChild(sc)}
  pt.append(h2,dl,p);
  if(GIOCABILI.has(g.s)&&location.protocol.startsWith('http')){const a=document.createElement('a');a.className='gioca';a.textContent=T('Gioca');a.href='gioca.html?s='+encodeURIComponent(g.s)+'&f='+encodeURIComponent(g.f);pt.appendChild(a)}
- if(pack){const b=document.createElement('button');b.className='btn';b.style.marginTop='12px';const agg=()=>b.textContent=T(sel.has(g.id)?'Nel pack · togli':'Aggiungi al pack');agg();b.onclick=()=>{imposta([g],!sel.has(g.id));agg()};pt.appendChild(b)}
+ if(pack){const b=document.createElement('button');b.className='btn';b.style.marginTop='12px';const agg=()=>b.textContent=T(nelPack(g)===1?'Nel pack · togli':'Aggiungi al pack');agg();b.onclick=()=>{imposta([g],nelPack(g)!==1);agg()};pt.appendChild(b)}
  $('pn').hidden=false;
 }
 $('px').onclick=()=>$('pn').hidden=true;
@@ -416,8 +425,8 @@ function attiva(n){
  if(n&&$('dw').hidden&&!document.body.dataset.chiuso)pannello(true);
  elenco();barra();filtra()}
 function imposta(gs,on){
- gs.forEach(g=>{if(on&&!sel.has(g.id)){sel.add(g.id);selSz+=g.sz}else if(!on&&sel.has(g.id)){sel.delete(g.id);selSz-=g.sz}
-  const v=vis.get(g.id);if(v){v.cb.checked=on;v.c.classList.toggle('on',on)}});
+ gs.forEach(r=>{(r.dischi||[r]).forEach(g=>{if(on&&!sel.has(g.id)){sel.add(g.id);selSz+=g.sz}else if(!on&&sel.has(g.id)){sel.delete(g.id);selSz-=g.sz}});
+  const v=vis.get(r.id);if(v){v.cb.checked=on;v.cb.indeterminate=false;v.c.classList.toggle('on',on)}});
  barra();salva()}
 $('pk').addEventListener('change',()=>{salva();attiva($('pk').value)});
 $('npb').onclick=()=>{

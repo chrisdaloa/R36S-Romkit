@@ -39,7 +39,7 @@
   'Pack non salvati sul NAS: il NAS non è raggiungibile. Le modifiche restano in questo browser.':'Packs not saved on the NAS: the NAS is unreachable. Changes stay in this browser.',
   'Azzera':'Reset','Genere':'Genre','Tutti i generi':'All genres','Lingua':'Language','Tutte le lingue':'All languages',
   'Giocatori':'Players','Voto minimo':'Minimum rating','Valutazione minima':'Minimum rating','Anno':'Year','Da':'From','A':'To','Anno da':'Year from','Anno a':'Year to',
-  'Solo senza immagine':'Only without image','Solo senza dati':'Only without data','{a} senza immagine, {b} senza dati (su {t})':'{a} without image, {b} without data (of {t})','Nel pack':'In pack','Filtro pack':'Pack filter','Tutti':'All','Fuori':'Not in pack',
+  'Solo senza immagine':'Only without image','Solo senza dati':'Only without data','{n} dischi':'{n} discs','{a} senza immagine, {b} senza dati (su {t})':'{a} without image, {b} without data (of {t})','Nel pack':'In pack','Filtro pack':'Pack filter','Tutti':'All','Fuori':'Not in pack',
   'Tutti i sistemi':'All systems','{n} giochi':'{n} games','Lingua non indicata ({n})':'Language not given ({n})',
   'Nessun gioco corrisponde ai filtri. Prova ad azzerarli dal pannello a sinistra.':'No game matches the filters. Try resetting them from the left panel.',
   'Mostra altri':'Show more',
