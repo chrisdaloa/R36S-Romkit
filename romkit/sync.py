@@ -148,7 +148,7 @@ def applica(cfg, dove, piano, aggiungi=True, togli=True, sistemi=None, stato=Non
         pr = subprocess.Popen(['rsync', '-rt', '--no-perms', '--no-owner', '--no-group', '--info=progress2,name0', *ex,
                                f'--files-from={lista}', cfg.archivio + '/', dove + '/'],
                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        buf = ''
+        buf, t_copia = '', time.time()
         while True:
             c = pr.stdout.read(1)
             if not c:
@@ -156,8 +156,12 @@ def applica(cfg, dove, piano, aggiungi=True, togli=True, sistemi=None, stato=Non
             if c in '\r\n':
                 m = re.match(r'\s*([\d.,]+)\s+(\d+)%\s+(\S+/s)\s+(\d+:\d+:\d+)', buf)
                 if m:
-                    stato.update(byte_fatti=int(re.sub(r'\D', '', m.group(1))), pct=int(m.group(2)),
-                                 velocita=m.group(3), resta=m.group(4))
+                    fatti_b, tot_b = int(re.sub(r'\D', '', m.group(1))), max(1, stato['byte_tot'])
+                    trascorso = max(1, time.time() - t_copia)
+                    # percentuale e tempo residuo dai byte del piano: quelli di rsync si basano su un totale che cresce durante la copia
+                    s = int((tot_b - fatti_b) * trascorso / fatti_b) if fatti_b else 0
+                    stato.update(byte_fatti=fatti_b, pct=min(100, fatti_b * 100 // tot_b), velocita=m.group(3),
+                                 resta=f'{s // 3600}:{s % 3600 // 60:02d}:{s % 60:02d}' if fatti_b else '')
                 buf = ''
             else:
                 buf += c

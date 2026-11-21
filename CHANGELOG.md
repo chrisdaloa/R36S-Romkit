@@ -2,6 +2,9 @@
 
 Il numero di versione sta in `romkit/versione.py` (`NUMERO`). Si vede nella pagina, accanto al nome, e con `romkit --version`.
 
+## 0.5.5 — 2026-11-21
+- Sincronizzazione: durante la copia la percentuale e il tempo che resta si calcolano dai byte del piano (gli stessi dei GB mostrati accanto), non più dai valori di rsync, che con liste lunghe partono troppo ottimisti.
+
 ## 0.5.4 — 2026-11-21
 - Sincronizzazione: il messaggio «spazio insufficiente» ora dice di quale pack si tratta, quanto serve (con il margine del 2%), quanto è libero e quanto manca, e che non è stato copiato nulla.
 
