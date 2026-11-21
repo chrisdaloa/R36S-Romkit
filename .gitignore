@@ -13,3 +13,7 @@ credenziali*
 /dist/
 /build/
 server.log
+
+# dati locali
+sorgenti.json
+*.bak
