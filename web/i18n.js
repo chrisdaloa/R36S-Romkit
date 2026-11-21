@@ -187,9 +187,22 @@
    const s=e.getAttribute(a);if(s&&EN[s]!==undefined)e.setAttribute(a,EN[s])}));
   document.title=T(document.title);
  };
- // selettore della lingua: ricorda la scelta e ricarica la pagina
- window.selettoreLingua=function(sel){
-  sel.value=lang;
-  sel.onchange=()=>{try{localStorage.setItem('lingua',sel.value)}catch(e){}location.reload()};
+ // selettore della lingua: due bandierine; ricorda la scelta e ricarica la pagina
+ const BANDIERE={
+  it:'<svg viewBox="0 0 3 2" aria-hidden="true"><rect width="1" height="2" fill="#009246"/><rect x="1" width="1" height="2" fill="#fff"/><rect x="2" width="1" height="2" fill="#ce2b37"/></svg>',
+  en:'<svg viewBox="0 0 60 40" aria-hidden="true"><rect width="60" height="40" fill="#012169"/><path d="M0 0L60 40M60 0L0 40" stroke="#fff" stroke-width="8"/><path d="M0 0L60 40M60 0L0 40" stroke="#c8102e" stroke-width="3"/><path d="M30 0V40M0 20H60" stroke="#fff" stroke-width="13"/><path d="M30 0V40M0 20H60" stroke="#c8102e" stroke-width="8"/></svg>'
+ };
+ const NOMI={it:'Italiano',en:'English'};
+ window.selettoreLingua=function(box){
+  box.setAttribute('role','group');
+  box.innerHTML='';
+  ['it','en'].forEach(l=>{
+   const b=document.createElement('button');
+   b.type='button';b.className='flag';b.innerHTML=BANDIERE[l];
+   b.title=b.ariaLabel=NOMI[l];
+   b.setAttribute('aria-pressed',l===lang?'true':'false');
+   b.onclick=()=>{if(l===lang)return;try{localStorage.setItem('lingua',l)}catch(e){}location.reload()};
+   box.appendChild(b);
+  });
  };
 })();
