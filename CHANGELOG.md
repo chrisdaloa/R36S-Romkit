@@ -2,6 +2,9 @@
 
 Il numero di versione sta in `romkit/versione.py` (`NUMERO`). Si vede nella pagina, accanto al nome, e con `romkit --version`.
 
+## 0.5.7 — 2026-11-22
+- Sincronizzazione, passo 1: la pagina dice che sta leggendo l'archivio sul NAS e che può richiedere qualche minuto (#6).
+
 ## 0.5.6 — 2026-11-22
 - Pack e sincronizzazione: i file `.sbi` (protezione LibCrypt dei giochi PS1) con lo stesso nome di un disco entrano da soli nella lista di copia, anche per i dischi elencati in un `.m3u`; non serve più aggiungerli a mano ai pack e la sincronizzazione non li propone da togliere (#9).
 - Preparazione del pack: i risultati si conservano per sistema e per cartella di servizio, non più uno solo per tutto il pack. Cambiando pochi giochi si rileggono dal NAS solo i sistemi interessati; il risultato è identico a quello della preparazione completa, e pack diversi non si cancellano più la cache a vicenda (#6).
