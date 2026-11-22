@@ -603,16 +603,19 @@ async function versione(forza){
 function apriAgg(){
  const t=$('agt');t.replaceChildren();
  const el=(tag,txt,par)=>{const n=document.createElement(tag);if(txt!=null)n.textContent=txt;(par||t).appendChild(n);return n};
+ const note=txt=>{let ul=null;(txt||'').split('\n').forEach(r=>{r=r.trim();if(!r)return;if(/^[-*] /.test(r)){ul=ul||el('ul');el('li',r.slice(2),ul)}else if(/^##/.test(r)){ul=null;el('p',r.replace(/^#+\s*/,'')).style.fontWeight='600'}else if(r[0]!=='#'){ul=null;el('p',r)}})};
  el('h2',T('Versione {v}',{v:aggVer?aggVer.versione:'?'}));
  if(agg&&agg.attivo===false)el('p',T('Il controllo degli aggiornamenti è spento ([aggiornamenti].controlla nel config).'));
  else if(agg&&agg.errore)el('p',T(agg.errore));
  else if(agg&&agg.disponibile){
   el('p',T('Disponibile la versione {v}',{v:agg.ultima})+(agg.pubblicata?' ('+agg.pubblicata+')':'')).style.fontWeight='600';
-  el('p',T('Novità'));let ul=null;
-  (agg.note||'').split('\n').forEach(r=>{r=r.trim();if(!r||r[0]==='#')return;if(/^[-*] /.test(r)){ul=ul||el('ul');el('li',r.slice(2),ul)}else{ul=null;el('p',r.replace(/^#+\s*/,''))}});
+  el('p',T('Novità'));note(agg.note);
   if(!agg.installabile)el('p',T('Questa copia non è l\'eseguibile autonomo: aggiorna con git pull oppure scarica la release.')).className='note';
   else if(!agg.modificabile)el('p',T('Si aggiorna solo dal PC che ospita il catalogo.')).className='note';
- }else if(agg)el('p',T('Hai l\'ultima versione.'));
+ }else if(agg&&!(aggVer&&aggVer.da_riavviare&&aggVer.novita))el('p',T('Hai l\'ultima versione.'));
+ if(aggVer&&aggVer.da_riavviare&&aggVer.novita){
+  el('p',T('Sul disco c\'è la versione {v}: riavvia per usarla.',{v:aggVer.versione_su_disco})).style.fontWeight='600';
+  el('p',T('Novità'));note(aggVer.novita)}
  const az=el('div',null);az.className='azioni';
  const pr=el('p','',t);pr.className='note';
  if(aggVer&&aggVer.da_riavviare&&(!agg||agg.modificabile!==false)){

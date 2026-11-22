@@ -327,3 +327,20 @@ class Scraper(unittest.TestCase):
             self.assertEqual((voce.findtext('desc'), voce.findtext('genre'), voce.findtext('releasedate'), voce.findtext('rating')),
                              ('Trama', 'Azione', '19940302T000000', '0.75'))
             self.assertTrue(os.path.exists(os.path.join(nes, voce.findtext('image'))))
+
+
+class NovitaSuDisco(unittest.TestCase):
+    def test_changelog_delle_versioni_piu_recenti(self):
+        from romkit import versione
+        with tempfile.TemporaryDirectory() as t:
+            os.makedirs(os.path.join(t, 'romkit'))
+            open(os.path.join(t, 'romkit', 'versione.py'), 'w').write("NUMERO = '9.9.9'\n")
+            open(os.path.join(t, 'CHANGELOG.md'), 'w').write('# x\n\n## 9.9.9 — d\n- nuovo\n\n## 0.0.1 — d\n- vecchio\n')
+            vecchia, versione.RADICE = versione.RADICE, t
+            try:
+                d, n = versione.novita_su_disco()
+            finally:
+                versione.RADICE = vecchia
+            self.assertEqual(d, '9.9.9')
+            self.assertIn('- nuovo', n)
+            self.assertNotIn('vecchio', n)
