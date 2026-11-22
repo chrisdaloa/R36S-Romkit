@@ -1,7 +1,7 @@
 """Versione del programma: numero di rilascio e, in una copia git, il commit in uso."""
 import os, sys, subprocess, time, glob
 
-NUMERO = '0.5.8'
+NUMERO = '0.5.9'
 CONGELATO = bool(getattr(sys, 'frozen', False))      # True nell'eseguibile autonomo (PyInstaller)
 RADICE = os.path.dirname(sys.executable) if CONGELATO else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

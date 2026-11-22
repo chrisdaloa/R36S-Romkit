@@ -245,3 +245,35 @@ class SbiCache(unittest.TestCase):
             self.assertEqual(leggi(nuovo), pieno2)
             ancora = packs.prepara(cfg, 'P', 'D', cache=True)
             self.assertEqual(ancora['ricalcolati'], [])
+
+    def test_dischi_nascosti_con_m3u_completo(self):
+        import xml.etree.ElementTree as ET
+        with tempfile.TemporaryDirectory() as t:
+            cfg = self.prepara_demo(t)
+            psx = os.path.join(cfg.archivio, 'psx')
+            open(os.path.join(psx, 'Rotto (Europe).m3u'), 'w').write('Rotto (Europe) (Disc 1).chd\nRotto (Europe) (Disc 2).chd\n')
+            open(os.path.join(psx, 'Rotto (Europe) (Disc 1).chd'), 'w').write('x')       # il disco 2 non esiste
+            def voce(p, extra=''):
+                return f'<game><path>./{p}</path><name>{p}</name>{extra}</game>'
+            open(os.path.join(psx, 'gamelist.xml'), 'w').write(
+                '<gameList>' + voce('Gioco (Europe).m3u', '<genre>RPG</genre>')
+                + voce('Gioco (Europe) (Disc 1).chd', '<desc>Trama</desc><image>./images/g1.png</image><genre>Altro</genre>')
+                + voce('Gioco (Europe) (Disc 2).chd') + voce('Altro (Europe).chd')
+                + voce('Rotto (Europe).m3u') + voce('Rotto (Europe) (Disc 1).chd') + '</gameList>')
+            os.makedirs(os.path.join(psx, 'images'), exist_ok=True)
+            open(os.path.join(psx, 'images', 'g1.png'), 'w').write('png')
+            json.dump({'P': {'cap': 1, 'ris': 0, 'ids': [f'psx/{x}' for x in (
+                'Gioco (Europe).m3u', 'Gioco (Europe) (Disc 1).chd', 'Gioco (Europe) (Disc 2).chd', 'Altro (Europe).chd',
+                'Rotto (Europe).m3u', 'Rotto (Europe) (Disc 1).chd')]}}, open(os.path.join(cfg.pack, 'packs.json'), 'w'))
+            r = packs.prepara(cfg, 'P', 'P1')
+            voci = {g.findtext('path'): g for g in ET.parse(os.path.join(r['dest'], 'gamelist', 'psx', 'gamelist.xml')).getroot().findall('game')}
+            nasc = lambda p: voci['./' + p].findtext('hidden')
+            self.assertIsNone(nasc('Gioco (Europe).m3u'))
+            self.assertEqual(nasc('Gioco (Europe) (Disc 1).chd'), 'true')
+            self.assertEqual(nasc('Gioco (Europe) (Disc 2).chd'), 'true')
+            self.assertIsNone(nasc('Altro (Europe).chd'))
+            m = voci['./Gioco (Europe).m3u']                       # prende info e immagine dal disco, ma tiene il proprio genere
+            self.assertEqual((m.findtext('desc'), m.findtext('image'), m.findtext('genre')), ('Trama', './images/g1.png', 'RPG'))
+            self.assertIsNone(nasc('Rotto (Europe).m3u'))
+            self.assertIsNone(nasc('Rotto (Europe) (Disc 1).chd'))   # .m3u incompleto: niente nascosto
+            self.assertTrue(any(a.startswith('M3U INCOMPLETO') and 'Rotto' in a for a in r['anomalie']))

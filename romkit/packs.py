@@ -60,7 +60,7 @@ def _chiave(cfg, pack):
             return None
     sistemi = sorted({i.split('/', 1)[0] for i in pack['ids']})
     dip = {
-        'v': 2, 'ids': sorted(pack['ids']), 'escludi': cfg['pack']['escludi'], 'servizio': cfg['pack']['servizio'],
+        'v': 3, 'ids': sorted(pack['ids']), 'escludi': cfg['pack']['escludi'], 'servizio': cfg['pack']['servizio'],
         'sottocart': cfg['catalogo']['sottocartelle'], 'solo': cfg['catalogo']['solo_estensione'],
         'sis': {s: [data(os.path.join(arch, s)), data(os.path.join(arch, s, 'gamelist.xml'))] for s in sistemi},
         'srv': {d: [data(os.path.join(arch, d)), data(os.path.join(arch, d, 'gamelist.xml'))] for d in cfg['pack']['servizio']},
@@ -102,6 +102,40 @@ def _cache_parte(cfg, tipo, nome, firma, calcola, usa):
         except OSError:
             pass
     return parte, False
+
+
+INFO_DISCO = ('desc', 'image', 'marquee', 'thumbnail', 'video', 'rating', 'releasedate', 'developer', 'publisher', 'genre')
+
+
+def _dischi_nascosti(sdir, base, fatti, root, anomalie):
+    """Dischi nominati da un .m3u completo (tutti i file esistono) del pack: nel gamelist vanno nascosti, resta la voce del .m3u.
+    Se la voce del .m3u non ha info o immagini, le prende dalla voce di un suo disco. Con un .m3u incompleto non si nasconde nulla."""
+    voci = {os.path.normpath(g.findtext('path') or ''): g for g in root.findall('game')}
+    nascosti = set()
+    for f in sorted(fatti):
+        if not f.lower().endswith('.m3u'):
+            continue
+        dischi = [os.path.normpath(c) for c in _collegati(sdir, f) if c.lower() != f.lower()]
+        dischi = [c for c in dischi if not c.lower().endswith(('.sbi', '.m3u'))]
+        if not dischi:
+            continue
+        if not all(os.path.isfile(os.path.join(sdir, c)) for c in dischi):
+            anomalie.append(f'M3U INCOMPLETO (dischi non nascosti)  {os.path.join(base, f)}')
+            continue
+        m = voci.get(os.path.normpath(f))
+        for c in dischi:
+            d = voci.get(c)
+            if d is None or c not in fatti:
+                continue
+            nascosti.add(c)
+            if m is not None:
+                for t in INFO_DISCO:
+                    if not (m.findtext(t) or '').strip() and (d.findtext(t) or '').strip():
+                        e = m.find(t)
+                        if e is None:
+                            e = ET.SubElement(m, t)
+                        e.text = d.findtext(t)
+    return nascosti
 
 
 def _sistema(cfg, s, ids):
@@ -170,11 +204,14 @@ def _sistema(cfg, s, ids):
             tree = None
         if tree is not None:
             root, tenuti = tree.getroot(), 0
+            nascosti = _dischi_nascosti(sdir, base, fatti, root, anomalie)
             for g in list(root.findall('game')):
                 if os.path.normpath(g.findtext('path') or '') not in fatti:
                     root.remove(g)
                     continue
                 tenuti += 1
+                if os.path.normpath(g.findtext('path') or '') in nascosti and g.find('hidden') is None:
+                    ET.SubElement(g, 'hidden').text = 'true'
                 voce = g.find('name')
                 if voce is not None and voce.text:
                     voce.text = senza_numero(s, voce.text, os.path.basename(g.findtext('path') or ''))
@@ -247,7 +284,7 @@ def prepara(cfg, nome, cartella, libero=None, avanza=None, cache=False):
         if avanza:
             avanza(s, k, len(per_sis), sub='', file=0)
         base = os.path.join(s, sottocart.get(s, ''))
-        firma = _firma({'v': 3, 'ids': sorted(per_sis[s]), 'escludi': escludi, 'sub': sottocart.get(s, ''),
+        firma = _firma({'v': 4, 'ids': sorted(per_sis[s]), 'escludi': escludi, 'sub': sottocart.get(s, ''),
                         'solo': cfg['catalogo']['solo_estensione'].get(s), 'sg': s in solo_gamelist,
                         'd': [_data(os.path.join(arch, s)), _data(os.path.join(arch, base)),
                               _data(os.path.join(arch, base, 'gamelist.xml'))]})
