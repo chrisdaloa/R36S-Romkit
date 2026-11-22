@@ -2,6 +2,10 @@
 
 Il numero di versione sta in `romkit/versione.py` (`NUMERO`). Si vede nella pagina, accanto al nome, e con `romkit --version`.
 
+## 0.5.8 — 2026-11-22
+- Pagina: accanto all'avviso «da riavviare» c'è il pulsante «Riavvia» (nel pannello della versione). Funziona solo dal PC che ospita il catalogo e si rifiuta se c'è una sincronizzazione o un altro lavoro in corso; la pagina si ricarica da sola quando il server risponde (#8).
+- Pack: il pulsante in alto mostra i GB scelti e lo spazio utile («Nome · 84,2 / 128 GB», in rosso se si sfora); nel pannello compare la variazione rispetto a quando hai aperto il pack, con i giochi aggiunti e tolti (#5).
+
 ## 0.5.7 — 2026-11-22
 - Sincronizzazione, passo 1: la pagina dice che sta leggendo l'archivio sul NAS e che può richiedere qualche minuto (#6).
 

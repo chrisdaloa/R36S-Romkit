@@ -240,6 +240,16 @@ def crea(cfg):
             threading.Thread(target=corri, daemon=True).start()
             self._json(b'{"ok": true}')
 
+        def _riavvia(self):
+            if not self._origine_ok():
+                return self.send_error(403)
+            with LAVORI_LOCK:
+                occupato = any(x['stato'] == 'in corso' for x in LAVORI.values())
+            if occupato or aggiorna.LAVORO.get('stato') in ('scarico', 'verifico', 'estraggo', 'sostituisco', 'riavvio'):
+                return self.send_error(409, 'Operazione in corso: attendi la fine prima di riavviare')
+            self._json(b'{"ok": true}')
+            guidata.riavvia(['--config', cfg.file, 'serve'] if versione.CONGELATO else ['-m', 'romkit.cli', '--config', cfg.file, 'serve'])
+
         def _sync_applica(self):
             if not self._origine_ok():
                 return self.send_error(403)
@@ -428,6 +438,8 @@ def crea(cfg):
                 return _setup_api(self, 'POST', cfg.file)
             if urlsplit(self.path).path == '/api/aggiornamento/installa':
                 return self._aggiorna_installa()
+            if urlsplit(self.path).path == '/api/riavvia':
+                return self._riavvia()
             if urlsplit(self.path).path == '/api/sync':
                 return self._sync_avvia()
             if urlsplit(self.path).path == '/api/sync/applica':

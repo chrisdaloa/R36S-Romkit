@@ -57,6 +57,7 @@ select{width:100%}
 .packbtn .mini{width:42px;height:6px;border-radius:3px;background:var(--pn2);overflow:hidden}
 .packbtn .mini i{display:block;height:100%;width:0;background:var(--ac)}
 .packbtn .mini.ov i{background:var(--er)}
+.packbtn #pkn.ov{color:var(--er);font-weight:600}
 .only-n{display:none}
 .warn{background:color-mix(in srgb,var(--er) 14%,var(--bg));color:var(--er);padding:8px 18px;font-weight:600;border-bottom:1px solid var(--ln)}
 
@@ -227,6 +228,7 @@ main.lista .sel{position:static;order:-1;margin-left:6px}
     <h3>Dimensione del pack</h3>
     <div class="gauge" id="bar"><div class="r"></div><div class="f"></div><div class="v"><b id="bg"></b><small id="bs"></small></div></div>
     <p class="note" id="bt"></p>
+    <p class="note" id="bv" hidden></p>
     <div class="f2">
      <label>Spazio utile (GB)<input id="pcap" type="number" min="1" step="1"></label>
      <label>Riserva (GB)<input id="pris" type="number" min="0" step="1"></label>
@@ -405,7 +407,7 @@ function barra(){
  document.body.classList.toggle('pk',!!pack);
  $('pkd').hidden=$('pfs').hidden=$('pd').hidden=!pack;$('pc').disabled=$('sy').disabled=!pack;
  $('pc').title=pack?'':T('Scegli prima un pack');
- $('pkn').textContent=pack||T('Pack');$('sezp').textContent=pack?'«'+pack+'»':'';mostraSpazio();
+ $('pkn').textContent=pack||T('Pack');$('pkn').classList.remove('ov');$('sezp').textContent=pack?'«'+pack+'»':'';mostraSpazio();
  if(!pack){$('pkm').firstChild.style.width='0';return}
  const p=P[pack],tot=selSz+p.ris*1e9,cap=p.cap*1e9;
  const a=Math.min(100,selSz/cap*100),r=Math.max(0,Math.min(100-a,p.ris*1e9/cap*100));
@@ -415,12 +417,18 @@ function barra(){
  $('pkm').firstChild.style.width=Math.min(100,tot/cap*100)+'%';
  $('pcap').value=p.cap;$('pris').value=p.ris;
  $('bg').textContent=gb(selSz);
+ $('pkn').textContent=pack+' · '+gb(selSz).replace(' GB','')+' / '+p.cap+' GB';$('pkn').classList.toggle('ov',tot>cap);
+ let dv=0,na=0,nr=0;sel.forEach(i=>{if(!base.has(i)){dv+=SZ.get(i)||0;na++}});base.forEach(i=>{if(!sel.has(i)){dv-=SZ.get(i)||0;nr++}});
+ const bv=$('bv');bv.hidden=!(na||nr);
+ if(na||nr)bv.textContent=T('Rispetto a quando hai aperto il pack: {d} ({a} aggiunti, {r} tolti)',{d:(dv<0?'−':'+')+gb(Math.abs(dv)),a:na,r:nr});
  $('bs').textContent=T('{n} giochi su {cap} GB',{n:sel.size.toLocaleString(LOC),cap:p.cap});
  const nt=$('bt');nt.classList.toggle('ov',tot>cap);
  nt.textContent=tot>cap?T('Sforato di {x} (con riserva di {r} GB).',{x:gb(tot-cap),r:p.ris}):T('Margine di {x}, con riserva di {r} GB.',{x:gb(cap-tot),r:p.ris})}
+let base=new Set(),SZ=new Map();
 function attiva(n){
  pack=n;sel=new Set(n?P[n].ids:[]);selSz=0;
- if(n){const m=new Map(D.map(g=>[g.id,g.sz]));sel.forEach(i=>{if(m.has(i))selSz+=m.get(i);else if(!/\.(m3u|nv|ccd|sub|img|sbi)$/i.test(i))sel.delete(i)})}
+ if(n){const m=SZ=new Map(D.map(g=>[g.id,g.sz]));sel.forEach(i=>{if(m.has(i))selSz+=m.get(i);else if(!/\.(m3u|nv|ccd|sub|img|sbi)$/i.test(i))sel.delete(i)})}
+ base=new Set(sel);
  try{localStorage.setItem('pack',n)}catch(e){}
  if(n&&$('dw').hidden&&!document.body.dataset.chiuso)pannello(true);
  elenco();barra();filtra()}
@@ -607,12 +615,22 @@ function apriAgg(){
  }else if(agg)el('p',T('Hai l\'ultima versione.'));
  const az=el('div',null);az.className='azioni';
  const pr=el('p','',t);pr.className='note';
+ if(aggVer&&aggVer.da_riavviare&&(!agg||agg.modificabile!==false)){
+  const r=el('button',T('Riavvia'),az);r.className='btn primary';r.type='button';
+  r.onclick=()=>riavviaServer(r,pr)}
  if(agg&&agg.disponibile&&agg.installabile&&agg.modificabile){
   const b=el('button',T('Aggiorna e riavvia'),az);b.className='btn primary';b.type='button';
   b.onclick=()=>installaAgg(b,pr)}
  const c=el('button',T('Cerca aggiornamenti'),az);c.className='btn';c.type='button';
  c.onclick=async()=>{c.disabled=true;await versione(true);apriAgg()};
  $('ag').hidden=false;
+}
+async function riavviaServer(b,pr){
+ b.disabled=true;pr.textContent=T('Riavvio…');
+ let r;try{r=await fetch('/api/riavvia',{method:'POST'})}catch(e){pr.textContent=T('Riavvio non riuscito');b.disabled=false;return}
+ if(!r.ok){pr.textContent=r.status===409?T('C\'è un\'operazione in corso: attendi la fine e riprova.'):T('Riavvio non riuscito');b.disabled=false;return}
+ const giro=async()=>{try{const n=await (await fetch('/api/versione')).json();if(!n.da_riavviare){location.reload();return}}catch(e){}setTimeout(giro,1000)};
+ setTimeout(giro,1500);
 }
 async function installaAgg(b,pr){
  b.disabled=true;pr.textContent=T('Avvio…');
