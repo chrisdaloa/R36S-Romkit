@@ -277,3 +277,53 @@ class SbiCache(unittest.TestCase):
             self.assertIsNone(nasc('Rotto (Europe).m3u'))
             self.assertIsNone(nasc('Rotto (Europe) (Disc 1).chd'))   # .m3u incompleto: niente nascosto
             self.assertTrue(any(a.startswith('M3U INCOMPLETO') and 'Rotto' in a for a in r['anomalie']))
+
+
+class Scraper(unittest.TestCase):
+    def test_cerca_e_applica_con_risposte_finte(self):
+        import zipfile, xml.etree.ElementTree as ET
+        from romkit import scraper
+        with tempfile.TemporaryDirectory() as t:
+            lav = os.path.join(t, 'lav')
+            cli.main(['demo', lav])
+            cfg = config.carica(os.path.join(lav, 'config.toml'))
+            nes = os.path.join(cfg.archivio, 'nes')
+            for f in ('Gioco Nuovo.zip', 'Ignoto.zip', 'Terzo.zip'):
+                with zipfile.ZipFile(os.path.join(nes, f), 'w') as z:
+                    z.writestr('rom.nes', f.encode())
+            gl = os.path.join(nes, 'gamelist.xml')
+            prima = open(gl).read() if os.path.exists(gl) else None
+            chiamate = []
+            def finto(url):
+                chiamate.append(url)
+                if url.startswith('http://img/'):
+                    return 200, b'PNG'
+                if 'Gioco+Nuovo' in url:
+                    j = {'response': {'jeu': {'noms': [{'region': 'wor', 'text': 'Gioco Nuovo'}],
+                         'synopsis': [{'langue': 'en', 'text': 'Eng'}, {'langue': 'it', 'text': 'Trama'}],
+                         'genres': [{'noms': [{'langue': 'it', 'text': 'Azione'}]}], 'dates': [{'region': 'wor', 'text': '1994-03-02'}],
+                         'note': {'text': '15'}, 'developpeur': {'text': 'Dev'},
+                         'medias': [{'type': 'box-2D', 'url': 'http://img/box', 'format': 'png'}]}}}
+                    return 200, json.dumps(j).encode()
+                if 'Terzo' in url:
+                    return 430, b'quota'
+                return 404, b'Erreur : Jeu non trouvee'
+            with self.assertRaises(SystemExit):
+                scraper.cerca(cfg, 'nes', http=finto, pausa=0)           # senza credenziali
+            cfg['scraper'].update(devid='d', devpassword='p')
+            with self.assertRaises(SystemExit) as e:
+                scraper.cerca(cfg, 'nes', http=lambda u: (403, b'Erreur de login'), pausa=0)
+            self.assertIn('devid', str(e.exception))
+            cerc, trov, resto = scraper.cerca(cfg, 'nes', http=finto, pausa=0, avanza=lambda *a: None)
+            self.assertIn('crc=', chiamate[0])
+            self.assertEqual((trov, resto > 0), (1, True))                 # il terzo ha fermato la ricerca per quota
+            n = len(chiamate)
+            scraper.cerca(cfg, 'nes', http=finto, pausa=0, avanza=lambda *a: None)
+            self.assertLess(len(chiamate) - n, n)                          # i gia' cercati non si richiedono
+            self.assertEqual(open(gl).read() if os.path.exists(gl) else None, prima)   # la ricerca non scrive nell'archivio
+            w = scraper.applica(cfg, 'nes', http=finto)
+            self.assertEqual((w['scritte'], w['media']), (1, 1))
+            voce = [g for g in ET.parse(gl).getroot().findall('game') if g.findtext('path') == './Gioco Nuovo.zip'][0]
+            self.assertEqual((voce.findtext('desc'), voce.findtext('genre'), voce.findtext('releasedate'), voce.findtext('rating')),
+                             ('Trama', 'Azione', '19940302T000000', '0.75'))
+            self.assertTrue(os.path.exists(os.path.join(nes, voce.findtext('image'))))

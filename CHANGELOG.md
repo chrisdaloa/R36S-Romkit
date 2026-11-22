@@ -2,6 +2,9 @@
 
 Il numero di versione sta in `romkit/versione.py` (`NUMERO`). Si vede nella pagina, accanto al nome, e con `romkit --version`.
 
+## 0.5.10 — 2026-11-22
+- Nuovo comando `romkit scraper <sistema> [--limite N] [--applica]` (facoltativo): cerca su ScreenScraper i giochi senza voce nel `gamelist.xml`, abbinandoli per CRC. Senza `--applica` interroga e basta, conservando gli esiti in `<dati>/scraper/` (riprendibile, si ferma da solo se la quota è finita); con `--applica` scrive le voci nel gamelist, scarica copertina e marquee e fa prima una copia di sicurezza. Servono `devid` e `devpassword` del programma in `[scraper]` del config; `ssid`/`sspassword` sono facoltativi. Gli id dei sistemi si correggono in `[scraper.sistemi]`. Nella pagina non c'è ancora nulla (#3).
+
 ## 0.5.9 — 2026-11-22
 - Pack: nel gamelist del pack i dischi di un gioco con `.m3u` completo (tutti i file nominati esistono) vengono nascosti con `<hidden>true</hidden>`, così sulla console compare una sola voce. Se la voce del `.m3u` non ha descrizione o immagini, le prende da quella di un disco. Con un `.m3u` incompleto non si nasconde nulla e compare un'anomalia «M3U INCOMPLETO» (#10).
 

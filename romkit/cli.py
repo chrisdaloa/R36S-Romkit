@@ -38,6 +38,8 @@ def main(argv=None):
     pp = ps.add_parser('prepara'); pp.add_argument('nome'); pp.add_argument('cartella')
     pc = ps.add_parser('copia'); pc.add_argument('cartella'); pc.add_argument('--applica', action='store_true')
     pc.add_argument('--destinazione')
+    sp = sub.add_parser('scraper', help='cerca su ScreenScraper i giochi senza voce nel gamelist (scrive solo con --applica)')
+    sp.add_argument('sistema'); sp.add_argument('--limite', type=int); sp.add_argument('--applica', action='store_true')
     if versione.CONGELATO and not (argv if argv is not None else sys.argv[1:]):
         argv = ['serve']                                       # doppio clic sull'eseguibile: avvia il catalogo
     a = p.parse_args(argv)
@@ -69,6 +71,17 @@ def main(argv=None):
         if not dove:
             sys.exit('Indica la SD: romkit sd riepilogo <cartella|utente@host:/percorso> oppure imposta [sd].destinazione')
         sd.riepilogo(cfg, dove) if a.az == 'riepilogo' else sd.confronta(cfg, dove, a.pack, a.dettagli)
+    elif a.cmd == 'scraper':
+        from . import scraper
+        c, t, resto = scraper.cerca(cfg, a.sistema, a.limite)
+        print(f'Cercati {c}, trovati {t}; ancora da cercare: {resto}')
+        r = scraper.riepilogo(cfg, a.sistema)
+        print(f'{a.sistema}: {r["senza_voce"]} senza voce, {r["trovati"]} con dati pronti, {r["non_trovati"]} non trovati')
+        if a.applica:
+            w = scraper.applica(cfg, a.sistema)
+            print(f'Scritte {w["scritte"]} voci e {w["media"]} immagini nell\'archivio (copia di sicurezza del gamelist fatta)')
+        else:
+            print('Anteprima: nulla è stato scritto nell\'archivio. Rilancia con --applica per scrivere.')
     elif a.cmd == 'pack':
         from . import packs
         if a.az == 'prepara':

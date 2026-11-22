@@ -16,6 +16,8 @@ DEFAULT = {
     'aggiornamenti': {'controlla': True, 'repo': 'chrisdaloa/R36S-Romkit', 'api': 'https://api.github.com', 'token': ''},
     'gioca': {'abilitato': False, 'sistemi': []},
     'sd': {'destinazione': '', 'sorgenti': {}, 'firma': {'avvio': 'BOOT', 'dati': 'EASYROMS'}},
+    'scraper': {'devid': '', 'devpassword': '', 'softname': 'R36S-Romkit', 'ssid': '', 'sspassword': '',
+                'pausa': 1.5, 'sistemi': {}},
     'sync': {'non_toccare': ['ports']},   # sistemi i cui file la sincronizzazione non toglie mai
     'pack': {
         'servizio': ['bios', 'bezels', 'bgmusic', 'launchimages', 'shutdownimages', 'themes', 'tools'],
