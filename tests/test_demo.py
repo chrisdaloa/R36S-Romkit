@@ -200,3 +200,48 @@ class Guidata(unittest.TestCase):
                     break
                 time.sleep(0.1)
             self.assertEqual((guidata.LAVORO['stato'], guidata.LAVORO['giochi']), ('finito', 10))
+
+
+class SbiCache(unittest.TestCase):
+    def prepara_demo(self, t):
+        lav = os.path.join(t, 'lav')
+        cli.main(['demo', lav])
+        cfg = config.carica(os.path.join(lav, 'config.toml'))
+        psx = os.path.join(cfg.archivio, 'psx')
+        os.makedirs(psx, exist_ok=True)
+        for f in ('Gioco (Europe) (Disc 1).chd', 'Gioco (Europe) (Disc 1).sbi', 'Gioco (Europe) (Disc 2).chd',
+                  'Gioco (Europe) (Disc 2).sbi', 'Gioco (Europe).m3u', 'Altro (Europe).chd', 'Altro (Europe).sbi'):
+            open(os.path.join(psx, f), 'w').write('Gioco (Europe) (Disc 1).chd\nGioco (Europe) (Disc 2).chd\n' if f.endswith('.m3u') else 'x')
+        os.makedirs(cfg.pack, exist_ok=True)
+        json.dump({'P': {'cap': 1, 'ris': 0, 'ids': ['psx/Gioco (Europe).m3u', 'psx/Altro (Europe).chd', 'nes/Super Demo Bros (Italy).zip']}},
+                  open(os.path.join(cfg.pack, 'packs.json'), 'w'))
+        return cfg
+
+    def test_sbi_inclusi(self):
+        with tempfile.TemporaryDirectory() as t:
+            cfg = self.prepara_demo(t)
+            r = packs.prepara(cfg, 'P', 'P1')
+            lista = open(os.path.join(r['dest'], 'lista-copia.txt')).read().split('\n')
+            for f in ('Gioco (Europe) (Disc 1).sbi', 'Gioco (Europe) (Disc 2).sbi', 'Altro (Europe).sbi'):
+                self.assertIn('psx/' + f, lista)
+
+    def test_cache_per_sistema_identica(self):
+        with tempfile.TemporaryDirectory() as t:
+            cfg = self.prepara_demo(t)
+            def leggi(r):
+                d = r['dest']
+                return (open(os.path.join(d, 'lista-copia.txt')).read(), open(os.path.join(d, 'report.txt')).read().split('\n', 1)[1],
+                        sorted((os.path.relpath(os.path.join(a, f), d), open(os.path.join(a, f), 'rb').read()) for a, _, ff in os.walk(os.path.join(d, 'gamelist')) for f in ff))
+            pieno = leggi(packs.prepara(cfg, 'P', 'A'))
+            primo = packs.prepara(cfg, 'P', 'B', cache=True)
+            self.assertTrue(primo['ricalcolati'])
+            self.assertEqual(leggi(primo), pieno)
+            # un solo sistema cambia: gli altri vengono dalla cache e il risultato resta identico al calcolo completo
+            ids = json.load(open(os.path.join(cfg.pack, 'packs.json')))
+            ids['P']['ids'].append('psx/Gioco (Europe) (Disc 1).chd')
+            json.dump(ids, open(os.path.join(cfg.pack, 'packs.json'), 'w'))
+            pieno2 = leggi(packs.prepara(cfg, 'P', 'C'))
+            nuovo = packs.prepara(cfg, 'P', 'B', cache=True)
+            self.assertEqual(leggi(nuovo), pieno2)
+            ancora = packs.prepara(cfg, 'P', 'D', cache=True)
+            self.assertEqual(ancora['ricalcolati'], [])
